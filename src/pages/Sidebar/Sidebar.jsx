@@ -22,7 +22,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     <div className={`sidebar ${isOpen ? "open" : "collapsed"}`}>
       <ul>
         <li style={{ fontSize: '22px', fontWeight: 'bold', textAlign: 'center', margin: '20px 0', borderBottom: '2px solid #c3b6d0', paddingBottom: '10px' }}>
-          {isOpen ? 'Pandian Crackers' : (
+          {isOpen ? 'Sri Durga Crackes' : (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginLeft: '-14px' }}>
               <img src={Logo} alt="PCW Logo" style={{ width: '50px', height: 'auto' }} />
             </div>
