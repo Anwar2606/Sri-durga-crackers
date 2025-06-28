@@ -5,7 +5,6 @@ import { collection, getDocs, deleteDoc, doc, Timestamp } from 'firebase/firesto
 import { db } from '../firebase'; // Adjust path if needed
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import './AllBillsPage.css'
 import { FaDownload, FaPrint, FaShareAlt, FaTrash, FaTruck } from 'react-icons/fa';
 import Logo from "../assets/PCW.png";
 import { format, isValid, parseISO } from 'date-fns';
@@ -17,7 +16,7 @@ import { TbListNumbers } from 'react-icons/tb';
 import { IoIosPerson } from 'react-icons/io';
 import Sidebar from '../Sidebar/Sidebar';
 
-const AllBillsPage = (bill) => {
+const InvoiceCopy = (bill) => {
   const [bills, setBills] = useState([]);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -36,22 +35,7 @@ const handleBillTypeChange = async (value) => {
   let collectionName = '';
 
   // Map dropdown value to Firestore collection
-  switch (value) {
-    case 'retail':
-      collectionName = 'retailBilling';
-      break;
-    case 'wholesale':
-      collectionName = 'wholesaleBilling';
-      break;
-    case 'invoice':
-      collectionName = 'invoicebilling';
-      break;
-    case 'way':
-      collectionName = 'wayBilling';
-      break;
-    default:
-      return;
-  }
+ 
 
   try {
     const snapshot = await getDocs(collection(db, collectionName));
@@ -79,15 +63,15 @@ useEffect(() => {
     const fetchBills = async () => {
       try {
         // Fetch bills from 'billing' collection
-        const billingSnapshot = await getDocs(collection(db, 'billing'));
+        const billingSnapshot = await getDocs(collection(db, 'invoicebilling'));
         const billingData = billingSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         // Fetch bills from 'customerBilling' collection
-        const customerBillingSnapshot = await getDocs(collection(db, 'customerBilling'));
-        const customerBillingData = customerBillingSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // const customerBillingSnapshot = await getDocs(collection(db, 'customerBilling'));
+        // const customerBillingData = customerBillingSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         // Combine both collections
-        const allBills = [...billingData, ...customerBillingData];
+        const allBills = [...billingData];
         
         setBills(allBills);
       } catch (error) {
@@ -122,7 +106,9 @@ const formatDate = (createdAt) => {
     ? createdAtDate.toLocaleDateString() // Returns only the date portion (e.g., "8/27/2024")
     : 'Invalid Date';
 };  
-const generatePDF = async (detail, copyType, billType) => {
+const generatePDF = async (detail) => {
+  const { jsPDF } = require('jspdf');
+  const numberToWords = require('number-to-words');
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -134,8 +120,8 @@ const generatePDF = async (detail, copyType, billType) => {
     doc.rect(borderMargin, borderMargin, pageWidth - 2 * borderMargin, pageHeight - 2 * borderMargin);
   };
 
-  const formattedDate = formatDate(detail.createdAt);
   const clean = (val) => (val === undefined ? '' : val);
+  const formattedDate = formatDate(detail.createdAt);
   const {
     customerName,
     customerAddress,
@@ -144,181 +130,187 @@ const generatePDF = async (detail, copyType, billType) => {
     customerGSTIN,
     customerPan
   } = detail;
- 
-  let headerTableStartY = 12;
-let headerTableEndY = 0; // Will be set dynamically
-let estimateType = '';
-  if (billType === 'retail') estimateType = 'Estimate for Retail';
-  else if (billType === 'wholesale') estimateType = 'Estimate for Wholesale';
-  else if (billType === 'invoice') estimateType = 'Tax Invoice';
-  else if (billType === 'way') estimateType = 'Way Bill';
-  else estimateType = 'Estimate';
+
+  const copyTypes = ['Transport', 'Sales', 'Office', 'Customer'];
+
+  for (let i = 0; i < copyTypes.length; i++) {
+    const copyType = copyTypes[i];
+    if (i > 0) doc.addPage();
+
+    let headerTableStartY = 12;
+    let headerTableEndY = 0;
+
+    doc.autoTable({
+      body: [
+        ['T.M.CRACKERS PARK', '','TAX INVOICE' ],
+        ['Address:1/90Z6, Balaji Nagar, Anna Colony', '',`${copyType.toUpperCase()} COPY` ],
+        ['Vadamamalapuram', '', `Invoice Number: SDC-${detail.invoiceNumber}-25`],
+        ['Thiruthangal - 626130', '', `Date: ${formattedDate}`],
+        ['Sivakasi (Zone)', '', 'GSTIN: 33AAVFT8036C1ZZ'],
+        ['Virudhunagar (Dist)', '', ''],
+        ['State: 33-Tamil Nadu', '', ''],
+        ['Phone number: 97514 87277 / 95853 58106', '', '']
+      ],
+      startY: headerTableStartY,
+      theme: 'plain',
+      styles: { fontSize: 9 },
+      margin: { left: 14, right: 14 },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 80 },
+        1: { cellWidth: 37 },
+        2: { fontStyle: 'bold', halign: 'right', cellWidth: 60 }
+      },
+      didParseCell: (data) => {
+        if (data.row.index === 0) {
+          data.cell.styles.textColor = [255, 0, 0];
+          data.cell.styles.fontSize = 11;
+          data.cell.styles.fontStyle = 'bold';
+        }
+      },
+      didDrawPage: drawPageBorder,
+      didDrawCell: (data) => {
+        if (data.row.index === 7 && data.column.index === 2) {
+          headerTableEndY = data.cell.y + data.cell.height;
+        }
+      }
+    });
+
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.2);
+    doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableStartY);
+
+    doc.autoTable({
+      body: [
+        ['TO', '', 'Account Details', ''],
+    ['Name', clean(customerName), 'A/c Holder Name', 'GOWTHAM'],
+    ['Address', clean(customerAddress), 'A/c Number', '231100050309543'],
+    ['State', clean(customerState), 'Bank Name', 'TAMILNAD MERCANTILE BANK'],
+    ['Phone', clean(customerPhoneNo), 'Branch', 'THIRUTHANGAL'],
+    ['GSTIN', clean(customerGSTIN), 'IFSC Code', 'TMBL0000231'],
+    ['PAN', clean(customerPan), '', '']
+      ],
+      startY: doc.autoTable.previous.finalY + 2,
+      theme: 'grid',
+      didDrawPage: drawPageBorder,
+      styles: { fontSize: 9 , lineColor: [0, 0, 0],},
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 30 },
+        1: { cellWidth: 60 },
+        2: { fontStyle: 'bold', cellWidth: 35 },
+        3: { cellWidth: 57 }
+      }
+    });
+
+    const productTableBody = detail.productsDetails.map(item => [
+      item.name || 'N/A',
+      '36041000',
+      item.quantity?.toString() || '0',
+      `Rs.${item.saleprice?.toFixed(2) || '0.00'}`,
+      `Rs.${((item.quantity || 0) * (item.saleprice || 0)).toFixed(2)}`
+    ]);
+
+    doc.autoTable({
+      head: [['Product Name', 'HSN CODE', 'Quantity', 'Price', 'Total Amount']],
+      body: productTableBody,
+      startY: doc.autoTable.previous.finalY + 2,
+      theme: 'grid',
+      didDrawPage: drawPageBorder,
+      headStyles: { fillColor: [255, 182, 193], textColor: [0, 0, 139], lineWidth: 0.2 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      styles: { fontSize: 10, lineColor: [0, 0, 0], },
+      columnStyles: {
+        0: { halign: 'left' },
+        1: { halign: 'center' },
+        2: { halign: 'right' },
+        3: { halign: 'right' },
+        4: { halign: 'right' }
+      }
+    });
+
+   
+    const totalAmount = `Rs.${detail.totalAmount?.toFixed(2) || '0.00'}`;
+const discountedAmount = `Rs.${detail.discountedTotal?.toFixed(2) || '0.00'}`;
+const cgstAmount = `Rs.${detail.cgstAmount?.toFixed(2) || '0.00'}`;
+const sgstAmount = `Rs.${detail.sgstAmount?.toFixed(2) || '0.00'}`;
+const igstAmount = `Rs.${detail.igstAmount?.toFixed(2) || '0.00'}`;
+const grandTotal = `Rs.${detail.grandTotal?.toFixed(2) || '0.00'}`;
 
 doc.autoTable({
   body: [
-    ['SRI DURGA CRACKERS', '', estimateType],
-    ['Address:1/90Z6, Balaji Nagar, Anna Colony', '', `Estimate Number: SDC-${detail.invoiceNumber}-25`],
-    ['Vadamamalapuram ', '', `Date:`],
-    ['Thiruthangal - 626130', '', ''],
-    ['Sivakasi (Zone)', '', ''],
-    ['Virudhunagar (Dist)', '', ''],
-    ['State: 33-Tamil Nadu', '', ''],
-    ['Phone number: 97514 87277 / 95853 58106', '', '']
+    ['Total Amount', totalAmount],
+    ['Discounted Amount', discountedAmount],
+    ['CGST (9%)', cgstAmount],
+    ['SGST (9%)', sgstAmount],
+    ['IGST (18%)', igstAmount],
+    ['Grand Total', grandTotal]
   ],
-  startY: headerTableStartY,
-  theme: 'plain',
-  styles: { fontSize: 9 },
-  margin: { left: 14, right: 14 },
-  columnStyles: {
-    0: { fontStyle: 'bold', cellWidth: 80 },
-    1: { cellWidth: 37 },
-    2: { fontStyle: 'bold', halign: 'right', cellWidth: 60 }
-  },
-  didParseCell: function (data) {
-    if (data.row.index === 0) {
-      data.cell.styles.textColor = [255, 0, 0];
-      data.cell.styles.fontSize = 11;
-      data.cell.styles.fontStyle = 'bold';
-    }
-  },
+  startY: doc.autoTable.previous.finalY + 1,
+  theme: 'grid',
   didDrawPage: drawPageBorder,
+  styles: { fontSize: 10, lineColor: [0, 0, 0], },
+  columnStyles: {
+    0: { halign: 'left', fontStyle: 'bold' },
+    1: { halign: 'right' }
+  }
+});
+
+
+    const totalInWords = numberToWords.toWords(detail.grandTotal || 0);
+    doc.autoTable({
+      body: [[`Rupees: ${totalInWords.toUpperCase()}`]],
+      startY: doc.autoTable.previous.finalY + 2,
+      theme: 'plain',
+      didDrawPage: drawPageBorder,
+      styles: { fontSize: 10, fontStyle: 'bold', textColor: [0, 0, 139] },
+      margin: { left: 15 }
+    });
+
+   let termsStartY = doc.autoTable.previous.finalY + 2;
+let termsEndY = 0; // will be set later
+
+// Terms & Conditions Table
+doc.autoTable({
+  body: [
+    ['Terms & Conditions'],
+    ['1. Goods once sold will not be taken back.'],
+    ['2. All matters subject to "Sivakasi" jurisdiction only.']
+  ],
+  startY: termsStartY,
+  theme: 'plain',
+  didDrawPage: drawPageBorder,
+  styles: { fontSize: 9 },
+  margin: { left: 15 },
   didDrawCell: function (data) {
-    // Set the bottom Y on last row and last column (index 2)
-    const lastRowIndex = 7; // total 8 rows, index starts from 0
-    const lastColIndex = 2;
-    if (data.row.index === lastRowIndex && data.column.index === lastColIndex) {
-      headerTableEndY = data.cell.y + data.cell.height;
+    // Capture bottom Y of last row
+    if (data.row.index === 2 && data.column.index === 0) {
+      termsEndY = data.cell.y + data.cell.height;
     }
   }
 });
 
-// ✅ Draw whole rectangle around the table
+// Authorised Signature Table (placed just below terms)
+doc.autoTable({
+  body: [['', '', 'Authorised Signature']],
+  startY: doc.autoTable.previous.finalY + 2,
+  theme: 'plain',
+  didDrawPage: drawPageBorder,
+  styles: { fontSize: 10, fontStyle: 'bold' },
+  columnStyles: {
+    2: { halign: 'right' }
+  },
+  margin: { left: 15, right: 15 }
+});
+
+// 🔲 Draw the rectangle after both tables
 doc.setDrawColor(0);
 doc.setLineWidth(0.2);
-doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableStartY);
+doc.rect(15, termsStartY, doc.internal.pageSize.getWidth() - 30, doc.autoTable.previous.finalY + 10 - termsStartY);
+  }
 
-
-  const customerAccountTable = [
-    ['TO', '', 'Account Details', ''],
-    ['Name', clean(customerName), 'A/c Holder Name', 'RAJESH KANNAN'],
-    ['Address', clean(customerAddress), 'A/c Number', '33098100000505'],
-    ['State', clean(customerState), 'Bank Name', 'BANK OF BARODA'],
-    ['Phone', clean(customerPhoneNo), 'Branch', 'SIVAKASI'],
-    ['GSTIN', clean(customerGSTIN), 'IFSC Code', 'BARB0SIVAKA'],
-    ['PAN', clean(customerPan), '', '']
-  ];
-
-  doc.autoTable({
-    body: customerAccountTable,
-    startY: doc.autoTable.previous.finalY + 2,
-    theme: 'grid',
-    didDrawPage: drawPageBorder,
-    styles: { fontSize: 9, textColor: [0, 0, 0] },
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 30 },
-      1: { cellWidth: 60 },
-      2: { fontStyle: 'bold', cellWidth: 35 },
-      3: { cellWidth: 55 }
-    }
-  });
-
-  const productTableBody = detail.productsDetails.map(item => [
-    item.name || 'N/A',
-    '36041000',
-    item.quantity?.toString() || '0',
-    `Rs.${item.saleprice?.toFixed(2) || '0.00'}`,
-    `Rs.${((item.quantity || 0) * (item.saleprice || 0)).toFixed(2)}`
-  ]);
-
-
-
-  doc.autoTable({
-    head: [['Product Name', 'HSN CODE', 'Quantity', 'Price', 'Total Amount']],
-    body: productTableBody,
-    startY: doc.autoTable.previous.finalY + 2,
-    theme: 'grid',
-    didDrawPage: drawPageBorder,
-    headStyles: { fillColor: [255, 182, 193], textColor: [0, 0, 139], lineWidth: 0.2 },
-    alternateRowStyles: { fillColor: [245, 245, 245] },
-    styles: { fontSize: 10 },
-    columnStyles: {
-      0: { halign: 'left' },
-      1: { halign: 'center' },
-      2: { halign: 'right' },
-      3: { halign: 'right' },
-      4: { halign: 'right' }
-    }
-  });
-
-  const totalAmount = `Rs.${detail.totalAmount?.toFixed(2) || '0.00'}`;
-  const discountedAmount = `Rs.${detail.discountedTotal?.toFixed(2) || '0.00'}`;
-  const grandTotal = `Rs.${detail.grandTotal?.toFixed(2) || '0.00'}`;
-
-  doc.autoTable({
-    body: [
-      ['Total Amount', totalAmount],
-      ['Discounted Amount', discountedAmount],
-      ['Grand Total', grandTotal]
-    ],
-    startY: doc.autoTable.previous.finalY + 1,
-    theme: 'grid',
-    didDrawPage: drawPageBorder,
-    styles: { fontSize: 10 },
-    columnStyles: {
-      0: { halign: 'left', fontStyle: 'bold' },
-      1: { halign: 'right' }
-    }
-  });
-
-  const numberToWords = require('number-to-words');
-  const totalInWords = numberToWords.toWords(detail.grandTotal || 0);
-  doc.autoTable({
-    body: [[`Rupees: ${totalInWords.toUpperCase()}`]],
-    startY: doc.autoTable.previous.finalY + 2,
-    theme: 'plain',
-    didDrawPage: drawPageBorder,
-    styles: { fontSize: 10, fontStyle: 'bold', textColor: [0, 0, 139] },
-    margin: { left: 15 }
-  });
-
-  const terms = [
-    ['Terms & Conditions'],
-    ['1. Goods once sold will not be taken back.'],
-    ['2. All matters subject to "Sivakasi" jurisdiction only.']
-  ];
-  doc.autoTable({
-    body: terms,
-    startY: doc.autoTable.previous.finalY + 2,
-    theme: 'plain',
-    didDrawPage: drawPageBorder,
-    styles: { fontSize: 9, fontStyle: 'normal', textColor: [0, 0, 0] },
-    margin: { left: 15 }
-  });
-
-  doc.autoTable({
-    body: [['', '', 'Authorised Signature']],
-    startY: doc.autoTable.previous.finalY + 2,
-    theme: 'plain',
-    didDrawPage: drawPageBorder,
-    styles: { fontSize: 10, fontStyle: 'bold' },
-    columnStyles: {
-      2: { halign: 'right' }
-    },
-    margin: { left: 15, right: 15 }
-  });
-
-  const fileName = `Invoice_${copyType.toLowerCase()}_copy.pdf`;
+  const fileName = `TAX INVOICE-${detail.invoiceNumber}.pdf`;
   doc.save(fileName);
 };
 
-
-
-  const handleDownloadAllPdfs = async (detail) => {
-    const copyTypes = ['Transport', 'Sales', 'Office', 'Customer'];
-    for (const copyType of copyTypes) {
-      generatePDF(detail, copyType);
-    }
-  };
   const handleShare = async (bill) => {
     const pdfUrl = await generatePdfUrl(bill); // Ensure you have a function to generate and return the PDF URL.
     const shareData = {
@@ -409,24 +401,7 @@ doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableSta
       {/* Main Content */}
       <div className="content">
         <div className="all-bills-page">
-          <h1>All Bills</h1>
-          <div style={{ marginBottom: '20px' }}>
-  <label style={{ fontWeight: 'bold', fontSize: '16px', marginRight: '10px' }}>
-    Select Bill Type:
-  </label>
-  <select
-    value={selectedBillType}
-    onChange={(e) => handleBillTypeChange(e.target.value)}
-    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
-  >
-    <option value="">-- Select Bill Type --</option>
-    <option value="retail">Retail Bills</option>
-    <option value="wholesale">Wholesale Bills</option>
-    <option value="invoice">Invoice Bills</option>
-    <option value="way">Way Bills</option>
-  </select>
-</div>
-
+          <h1>Invoice Bills</h1>
           <div className="date-filter">
           <label style={{ fontSize: '16px', fontWeight: 'bold', marginRight: '10px' }}>
   Select Date:
@@ -463,7 +438,7 @@ doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableSta
                     <td>
                       <FaDownload
                         className="download-icon"
-                        onClick={() => handleDownloadAllPdfs(bill)}
+                        onClick={() => generatePDF(bill)}
                       />
                       <FaTrash
                         className="delete-icon"
@@ -492,4 +467,4 @@ doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableSta
   
   };
 
-export default AllBillsPage;
+export default InvoiceCopy;

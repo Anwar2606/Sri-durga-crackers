@@ -241,7 +241,7 @@ const WayBill = () => {
       igstAmount = discountedTotal * 0.18;
     }
 
-    const grandTotal = discountedTotal ;
+    const grandTotal = discountedTotal + cgstAmount + sgstAmount + igstAmount;
 
     setBillingDetails(prevState => ({
       ...prevState,
@@ -343,7 +343,7 @@ cart.forEach(async (item) => {
   await updateProductQuantity(item.productId, item.quantity);
 });
 
-const billingDocRef = collection(db, 'billing');
+const billingDocRef = collection(db, 'wayBilling');
 try {
   await addDoc(billingDocRef, {
     ...billingDetails,
@@ -388,32 +388,38 @@ const CustomerCopy = async () => {
     alert('Please enter a valid invoice number.');
     return; // Exit the function if the invoice number is empty
   }
-  const billingDocRef = collection(db, 'customerBilling');
-  
+   const billingData = {
+    ...billingDetails,
+    customerName: customerName || "",
+    customerAddress: customerAddress || "",
+    customerState: customerState || "",
+    customerPhoneNo: customerPhoneNo || "",
+    customerEmail: customerEmail || "",
+    customerGSTIN: customerGSTIN || "",
+    createdAt: Timestamp.fromDate(selectedDate || new Date()),
+    invoiceNumber: invoiceNumber || "",
+    productDetails: cart.map((item) => ({
+      productId: item.productId || "",
+      name: item.name || "",
+      saleprice: item.saleprice || 0,
+      quantity: item.quantity || 0,
+    })),
+  };
+
   try {
-    
-    await addDoc(billingDocRef, {
-      ...billingDetails,
-      customerName,
-      customerAddress,
-      customerState,
-      customerPhoneNo,
-      customerEmail,
-      customerGSTIN,
-     
-      productsDetails: cart.map(item => ({
-        productId: item.productId,
-        name: item.name,
-        saleprice: item.saleprice,
-        quantity: item.quantity
-      })),
-      createdAt: Timestamp.fromDate(selectedDate),
-      invoiceNumber, // Use the same invoice number
-    });
-    console.log('Billing details saved successfully in Firestore');
+    const docRef = await addDoc(collection(db, "wayBilling"), billingData);
+    console.log("Document saved with ID:", docRef.id);
+    alert("Billing saved successfully!");
   } catch (error) {
-    console.error('Error saving billing details: ', error);
+    console.error("Error saving billing details:", error.message);
+    alert("Failed to save. " + error.message);
+    return; // Don't proceed with PDF if Firebase save fails
   }
+
+
+
+
+
 
   // Generate and save PDF invoice
    const doc = new jsPDF();
@@ -430,9 +436,9 @@ const CustomerCopy = async () => {
   drawPageBorder();
 
   const headerTable = [
-  ['T.M.CRACKERS PARK', '', ''],
-  ['Address:1/90Z6, Balaji Nagar, Anna Colony', '', `Estimate Number: SDC-${invoiceNumber}-25`],
-  ['Vadamamalapuram ', '', `Date: ${selectedDate.getDate().toString().padStart(2, '0')}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getFullYear()}`],
+  ['T.M.CRACKERS PARK', '', `Estimate Number: SDC-${invoiceNumber}-25`],
+  ['Address:1/90Z6, Balaji Nagar, Anna Colony', '',`Date: ${selectedDate.getDate().toString().padStart(2, '0')}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getFullYear()}` ],
+  ['Vadamamalapuram ', '', ''],
   ['Thiruthangal - 626130', '', ''],
   ['Sivakasi (Zone)', '', ''],
   ['Virudhunagar (Dist)', '', ''],
@@ -481,10 +487,10 @@ let startY = doc.autoTable.previous.finalY + 5;
 
   const customerDetails = [
   ['TO', '', 'Account Details', ''], // Fixed: 4 columns
-  ['Name', customerName, 'A/c Holder Name', 'Gowtham'],
+  ['Name', customerName, 'A/c Holder Name', 'GOWTHAM'],
   ['Address', customerAddress, 'A/c Number', '231100050309543'],
-  ['State', customerState, 'Bank Name', 'Tamilnad Mercantile Bank'],
-  ['Phone', customerPhoneNo, 'Branch', 'Thiruthangal'],
+  ['State', customerState, 'Bank Name', 'TAMILNAD MERCANTILE BANK'],
+  ['Phone', customerPhoneNo, 'Branch', 'THIRUTHANGAL'],
   ['GSTIN', customerGSTIN, 'IFSC Code', 'TMBL0000231'],
   ['PAN', customerPan, '', '']
 ];
@@ -650,7 +656,7 @@ doc.text(authSig, authSigX, currentY);
 
 
 
-  doc.save(`EST R-${invoiceNumber}-25.pdf`);
+  doc.save(`WAY BILL-${invoiceNumber}.pdf`);
   
 };
 

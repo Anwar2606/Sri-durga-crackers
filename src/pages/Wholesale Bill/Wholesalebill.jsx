@@ -387,7 +387,7 @@ const CustomerCopy = async () => {
     alert('Please enter a valid invoice number.');
     return; // Exit the function if the invoice number is empty
   }
-  const billingDocRef = collection(db, 'customerBilling');
+  const billingDocRef = collection(db, 'wholesaleBilling');
   
   try {
     

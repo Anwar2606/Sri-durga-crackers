@@ -5,7 +5,6 @@ import { collection, getDocs, deleteDoc, doc, Timestamp } from 'firebase/firesto
 import { db } from '../firebase'; // Adjust path if needed
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import './AllBillsPage.css'
 import { FaDownload, FaPrint, FaShareAlt, FaTrash, FaTruck } from 'react-icons/fa';
 import Logo from "../assets/PCW.png";
 import { format, isValid, parseISO } from 'date-fns';
@@ -17,7 +16,7 @@ import { TbListNumbers } from 'react-icons/tb';
 import { IoIosPerson } from 'react-icons/io';
 import Sidebar from '../Sidebar/Sidebar';
 
-const AllBillsPage = (bill) => {
+const RetailCopy = (bill) => {
   const [bills, setBills] = useState([]);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -36,22 +35,7 @@ const handleBillTypeChange = async (value) => {
   let collectionName = '';
 
   // Map dropdown value to Firestore collection
-  switch (value) {
-    case 'retail':
-      collectionName = 'retailBilling';
-      break;
-    case 'wholesale':
-      collectionName = 'wholesaleBilling';
-      break;
-    case 'invoice':
-      collectionName = 'invoicebilling';
-      break;
-    case 'way':
-      collectionName = 'wayBilling';
-      break;
-    default:
-      return;
-  }
+ 
 
   try {
     const snapshot = await getDocs(collection(db, collectionName));
@@ -79,15 +63,15 @@ useEffect(() => {
     const fetchBills = async () => {
       try {
         // Fetch bills from 'billing' collection
-        const billingSnapshot = await getDocs(collection(db, 'billing'));
+        const billingSnapshot = await getDocs(collection(db, 'retailBilling'));
         const billingData = billingSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         // Fetch bills from 'customerBilling' collection
-        const customerBillingSnapshot = await getDocs(collection(db, 'customerBilling'));
-        const customerBillingData = customerBillingSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // const customerBillingSnapshot = await getDocs(collection(db, 'customerBilling'));
+        // const customerBillingData = customerBillingSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         // Combine both collections
-        const allBills = [...billingData, ...customerBillingData];
+        const allBills = [...billingData];
         
         setBills(allBills);
       } catch (error) {
@@ -147,18 +131,13 @@ const generatePDF = async (detail, copyType, billType) => {
  
   let headerTableStartY = 12;
 let headerTableEndY = 0; // Will be set dynamically
-let estimateType = '';
-  if (billType === 'retail') estimateType = 'Estimate for Retail';
-  else if (billType === 'wholesale') estimateType = 'Estimate for Wholesale';
-  else if (billType === 'invoice') estimateType = 'Tax Invoice';
-  else if (billType === 'way') estimateType = 'Way Bill';
-  else estimateType = 'Estimate';
+
 
 doc.autoTable({
   body: [
-    ['SRI DURGA CRACKERS', '', estimateType],
+    ['SRI DURGA CRACKERS', '', 'Estimate For Retail'],
     ['Address:1/90Z6, Balaji Nagar, Anna Colony', '', `Estimate Number: SDC-${detail.invoiceNumber}-25`],
-    ['Vadamamalapuram ', '', `Date:`],
+    ['Vadamamalapuram ', '', `Date:${formattedDate}`],
     ['Thiruthangal - 626130', '', ''],
     ['Sivakasi (Zone)', '', ''],
     ['Virudhunagar (Dist)', '', ''],
@@ -200,11 +179,11 @@ doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableSta
 
   const customerAccountTable = [
     ['TO', '', 'Account Details', ''],
-    ['Name', clean(customerName), 'A/c Holder Name', 'RAJESH KANNAN'],
-    ['Address', clean(customerAddress), 'A/c Number', '33098100000505'],
-    ['State', clean(customerState), 'Bank Name', 'BANK OF BARODA'],
-    ['Phone', clean(customerPhoneNo), 'Branch', 'SIVAKASI'],
-    ['GSTIN', clean(customerGSTIN), 'IFSC Code', 'BARB0SIVAKA'],
+    ['Name', clean(customerName), 'A/c Holder Name', 'GOWTHAM'],
+    ['Address', clean(customerAddress), 'A/c Number', '231100050309543'],
+    ['State', clean(customerState), 'Bank Name', 'TAMILNAD MERCANTILE BANK'],
+    ['Phone', clean(customerPhoneNo), 'Branch', 'THIRUTHANGAL'],
+    ['GSTIN', clean(customerGSTIN), 'IFSC Code', 'TMBL0000231'],
     ['PAN', clean(customerPan), '', '']
   ];
 
@@ -213,12 +192,12 @@ doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableSta
     startY: doc.autoTable.previous.finalY + 2,
     theme: 'grid',
     didDrawPage: drawPageBorder,
-    styles: { fontSize: 9, textColor: [0, 0, 0] },
+    styles: { fontSize: 9, textColor: [0, 0, 0], lineColor: [0, 0, 0] },
     columnStyles: {
       0: { fontStyle: 'bold', cellWidth: 30 },
       1: { cellWidth: 60 },
       2: { fontStyle: 'bold', cellWidth: 35 },
-      3: { cellWidth: 55 }
+      3: { cellWidth: 57 }
     }
   });
 
@@ -240,7 +219,7 @@ doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableSta
     didDrawPage: drawPageBorder,
     headStyles: { fillColor: [255, 182, 193], textColor: [0, 0, 139], lineWidth: 0.2 },
     alternateRowStyles: { fillColor: [245, 245, 245] },
-    styles: { fontSize: 10 },
+    styles: { fontSize: 10,lineColor: [0, 0, 0]  },
     columnStyles: {
       0: { halign: 'left' },
       1: { halign: 'center' },
@@ -263,7 +242,7 @@ doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableSta
     startY: doc.autoTable.previous.finalY + 1,
     theme: 'grid',
     didDrawPage: drawPageBorder,
-    styles: { fontSize: 10 },
+    styles: { fontSize: 10 , lineColor: [0, 0, 0] },
     columnStyles: {
       0: { halign: 'left', fontStyle: 'bold' },
       1: { halign: 'right' }
@@ -281,25 +260,31 @@ doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableSta
     margin: { left: 15 }
   });
 
-  const terms = [
-    ['Terms & Conditions'],
-    ['1. Goods once sold will not be taken back.'],
-    ['2. All matters subject to "Sivakasi" jurisdiction only.']
-  ];
+  const termsStartY = doc.autoTable.previous.finalY + 2;
+  let termsEndY = 0;
+
   doc.autoTable({
-    body: terms,
-    startY: doc.autoTable.previous.finalY + 2,
+    body: [
+      ['Terms & Conditions'],
+      ['1. Goods once sold will not be taken back.'],
+      ['2. All matters subject to "Sivakasi" jurisdiction only.']
+    ],
+    startY: termsStartY,
     theme: 'plain',
-    didDrawPage: drawPageBorder,
-    styles: { fontSize: 9, fontStyle: 'normal', textColor: [0, 0, 0] },
-    margin: { left: 15 }
+    styles: { fontSize: 9 },
+    margin: { left: 15 },
+    didDrawCell: function (data) {
+      if (data.row.index === 2 && data.column.index === 0) {
+        termsEndY = data.cell.y + data.cell.height;
+      }
+    }
   });
 
+  // Signature Row
   doc.autoTable({
     body: [['', '', 'Authorised Signature']],
     startY: doc.autoTable.previous.finalY + 2,
     theme: 'plain',
-    didDrawPage: drawPageBorder,
     styles: { fontSize: 10, fontStyle: 'bold' },
     columnStyles: {
       2: { halign: 'right' }
@@ -307,14 +292,19 @@ doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableSta
     margin: { left: 15, right: 15 }
   });
 
-  const fileName = `Invoice_${copyType.toLowerCase()}_copy.pdf`;
+  // Rectangle for Terms & Signature section
+  doc.setDrawColor(0);
+  doc.setLineWidth(0.2);
+  doc.rect(15, termsStartY, pageWidth - 30, doc.autoTable.previous.finalY + 10 - termsStartY);
+
+  const fileName = `EST R-${detail.invoiceNumber}-25.pdf`;
   doc.save(fileName);
 };
 
 
 
   const handleDownloadAllPdfs = async (detail) => {
-    const copyTypes = ['Transport', 'Sales', 'Office', 'Customer'];
+    const copyTypes = ['Transport'];
     for (const copyType of copyTypes) {
       generatePDF(detail, copyType);
     }
@@ -409,24 +399,7 @@ doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableSta
       {/* Main Content */}
       <div className="content">
         <div className="all-bills-page">
-          <h1>All Bills</h1>
-          <div style={{ marginBottom: '20px' }}>
-  <label style={{ fontWeight: 'bold', fontSize: '16px', marginRight: '10px' }}>
-    Select Bill Type:
-  </label>
-  <select
-    value={selectedBillType}
-    onChange={(e) => handleBillTypeChange(e.target.value)}
-    style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
-  >
-    <option value="">-- Select Bill Type --</option>
-    <option value="retail">Retail Bills</option>
-    <option value="wholesale">Wholesale Bills</option>
-    <option value="invoice">Invoice Bills</option>
-    <option value="way">Way Bills</option>
-  </select>
-</div>
-
+          <h1>Retail Bills</h1>
           <div className="date-filter">
           <label style={{ fontSize: '16px', fontWeight: 'bold', marginRight: '10px' }}>
   Select Date:
@@ -492,4 +465,4 @@ doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableSta
   
   };
 
-export default AllBillsPage;
+export default RetailCopy;

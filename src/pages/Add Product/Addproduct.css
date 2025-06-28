@@ -15,6 +15,9 @@
 .custom-select:focus {
   border-color: #007bff;
 }
+.add-product-container {
+  display: flex;
+}
 
 .custom-select option {
   padding: 10px;

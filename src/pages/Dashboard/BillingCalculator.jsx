@@ -338,7 +338,7 @@ cart.forEach(async (item) => {
   await updateProductQuantity(item.productId, item.quantity);
 });
 
-const billingDocRef = collection(db, 'billing');
+const billingDocRef = collection(db, 'invoicebilling');
 try {
   await addDoc(billingDocRef, {
     ...billingDetails,
@@ -430,10 +430,10 @@ const generatePDFPage = (doc, copyType, invoiceNumber) => {
 
   const customerDetails = [
     ['TO', '', 'Account Details', ''],
-    ['Name', customerName, 'A/c Holder Name', 'Gowtham'],
+    ['Name', customerName, 'A/c Holder Name', 'GOWTHAM'],
     ['Address', customerAddress, 'A/c Number', '231100050309543'],
-    ['State', customerState, 'Bank Name', 'Tamilnad Mercantile Bank'],
-    ['Phone', customerPhoneNo, 'Branch', 'Thiruthangal'],
+    ['State', customerState, 'Bank Name', 'TAMILNAD MERCANTILE BANK'],
+    ['Phone', customerPhoneNo, 'Branch', 'THIRUTHANGAL'],
     ['GSTIN', customerGSTIN, 'IFSC Code', 'TMBL0000231'],
     ['PAN', customerPan, '', '']
   ];

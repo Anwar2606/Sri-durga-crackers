@@ -28,12 +28,12 @@ const firebaseConfig = {
   // appId: "1:97163152398:web:b02de4e1e085efbca9c05f"
 
   //main db
- apiKey: "AIzaSyCWtyE1EzPEd2m9e_qYzqEFKnqE0HsEUg4",
-  authDomain: "sri-durga-crackers.firebaseapp.com",
-  projectId: "sri-durga-crackers",
-  storageBucket: "sri-durga-crackers.firebasestorage.app",
-  messagingSenderId: "547012249771",
-  appId: "1:547012249771:web:90f15a9267380e3bf54fee"
+apiKey: "AIzaSyBPgmKGtDOY8UNRJd_ijyuTJ8bRv2fopEk",
+  authDomain: "new-sri-durga-crackers.firebaseapp.com",
+  projectId: "new-sri-durga-crackers",
+  storageBucket: "new-sri-durga-crackers.firebasestorage.app",
+  messagingSenderId: "984103787875",
+  appId: "1:984103787875:web:87d67debdd8c47e19e0756"
 };
 
 const app = initializeApp(firebaseConfig);

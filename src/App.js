@@ -20,7 +20,7 @@ import AllBillsPage from './pages/AllBills/AllBillsPage';
 import InvoiceNumbersPage from './pages/Invoice Numbers/InvoiceNumbersPage';
 import DownloadBillingData from './pages/Download bill/DownloadBillingData';
 import NewHome from './pages/Home/NewHome';
-import EditBillPage from './pages/EditBilll/EditBill';
+import EditBillPage from './pages/EditBilll/InvoiceEditBill';
 import AddCustomer from './pages/Customer/AddCustomer';
 import ShowCustomers from './pages/Show Customers/ShowCustomers';
 import MergePDFs from './pages/Merge Pdf/MergePdf';
@@ -29,6 +29,14 @@ import ShowTransportDetails from './pages/ShowTransport/ShowTransportDetails';
 import RetailCalculator from './pages/Retail/RetailCalculator';
 import WholesaleBill from './pages/Wholesale Bill/Wholesalebill';
 import WayBill from './pages/Way Bill/WayBill';
+import WholesaleCopy from './pages/Wholesale Copy/WholesaleCopy';
+import RetailCopy from './pages/Retail Copy/RetailCopy';
+import InvoiceCopy from './pages/Invoice Copy/InvoiceCopy';
+import InvoiceEditBillPage from './pages/EditBilll/InvoiceEditBill';
+import RetailEditBillPage from './pages/Retail Edit bill/RetailEditBill';
+import WholesaleEditBillPage from './pages/Edit Wholesale Copy/EditWholesaleCopy';
+import WayBillCopy from './pages/Way bill copy/WayBillCopy';
+import WayBillEditBillPage from './pages/Edit Waybill/EditWayBill';
 
 
 
@@ -86,7 +94,14 @@ const isBillingPage = location.pathname === '/invoicebill' || location.pathname 
           <Route path="/" element={<LoginPage />} />
           <Route path="/pdf" element={<MergePDFs />} />
           <Route path="/showtransport" element={<ShowTransportDetails />} />
-          <Route path="/editbill" element={<EditBillPage />} />
+          <Route path="/invoiceeditbill" element={<InvoiceEditBillPage/>} />
+          <Route path="/retaileditbill" element={<RetailEditBillPage/>} />
+          <Route path="/waybilleditbill" element={<WayBillEditBillPage/>} />
+          <Route path="/wholesaleeditbill" element={<WholesaleEditBillPage/>} />
+          <Route path="/retailcopy" element={<RetailCopy />} />
+          <Route path="/invoicecopy" element={<InvoiceCopy />} />
+          <Route path="/waybillcopy" element={<WayBillCopy />} />
+          <Route path="/wholesalecopy" element={<WholesaleCopy />} />
           <Route path="/wholesalebill" element={<WholesaleBill />} />
            <Route path="/waybill" element={<WayBill />} />
           <Route path="/showcustomers" element={<ShowCustomers />} />
