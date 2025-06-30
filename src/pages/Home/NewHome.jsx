@@ -3,8 +3,7 @@ import "./NewHome.css";
 import { 
     FaHome, FaInfoCircle, FaServicestack, FaEnvelope, 
     FaArrowAltCircleRight, FaArrowCircleLeft, FaEye, 
-    FaEdit, FaFileInvoice, 
-    FaTruck
+    FaEdit, FaFileInvoice, FaTruck
 } from "react-icons/fa";
 import { AiFillProduct } from "react-icons/ai";
 import { MdLogout } from "react-icons/md";
@@ -21,12 +20,11 @@ import Card2 from "../assets/cardnew22.png";
 import Card3 from "../assets/cardnew3.png";
 import Card22 from "../assets/card22.png";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "../firebase"; // Ensure Firebase is properly configured
+import { db } from "../firebase";
 import SalesComparisonChart from "../Chart/SalesComparisonChart";
 import { Link } from "react-router-dom";
 import Sidebar from "../Sidebar/Sidebar";
 
-// Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const NewHome = () => {
@@ -35,125 +33,102 @@ const NewHome = () => {
     const [uniqueCustomers, setUniqueCustomers] = useState(0);
     const [todaySales, setTodaySales] = useState(0);
     const [monthSales, setMonthSales] = useState(0);
-    const [monthlySales, setMonthlySales] = useState(Array(12).fill(0)); // Monthly sales data
-    useEffect(() => {
-        // Function to fetch customer count
-        const fetchCustomerCount = async () => {
-          try {
-            const querySnapshot = await getDocs(collection(db, "customer")); // Replace 'customer' with your collection name
-            setUniqueCustomers(querySnapshot.size); // Set the number of documents
-          } catch (error) {
-            console.error("Error fetching customer data: ", error);
-          }
-        };
-    
-        fetchCustomerCount();
-      }, []);
+    const [monthlySales, setMonthlySales] = useState(Array(12).fill(0));
 
-      useEffect(() => {
+    useEffect(() => {
+        const fetchCustomerCount = async () => {
+            try {
+                const querySnapshot = await getDocs(collection(db, "customer"));
+                setUniqueCustomers(querySnapshot.size);
+            } catch (error) {
+                console.error("Error fetching customer data:", error);
+            }
+        };
+        fetchCustomerCount();
+    }, []);
+
+    useEffect(() => {
         const fetchTodaySales = async () => {
-            const today = new Date();
-            const startOfDay = new Date(today.setHours(0, 0, 0, 0)); // Start of today
-            const endOfDay = new Date(today.setHours(23, 59, 59, 999)); // End of today
-    
-            // Query for today's records in the billing collection
+            const now = new Date();
+            const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+            const endOfDay = new Date(now.setHours(23, 59, 59, 999));
+
             const todayBillingQuery = query(
-                collection(db, "billing"), // 'billing' is the collection name
+                collection(db, "invoicebilling"), // ✅ Correct collection
                 where("date", ">=", startOfDay),
                 where("date", "<=", endOfDay)
             );
-    
+
             try {
                 const querySnapshot = await getDocs(todayBillingQuery);
-    
-                // Calculate the total amount for today's sales
                 let totalAmount = 0;
+
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    totalAmount += data.totalAmount || 0; // Sum up the totalAmount field
+                    const amount = parseFloat(data.totalAmount ?? 0);
+                    if (!isNaN(amount)) totalAmount += amount;
                 });
-    
-                // Log the totalAmount to verify the calculation
-                console.log("Today's Total Sales: ₹", totalAmount);
-    
-                setTodaySales(totalAmount); // Set the total sales for today
+
+                setTodaySales(totalAmount);
             } catch (error) {
-                console.error("Error fetching today's sales: ", error);
+                console.error("Error fetching today's sales:", error);
             }
         };
-    
+
         fetchTodaySales();
-    }, []); // Empty dependency array ensures it runs once when the component mounts
-    
-    
-    
-    
+    }, []);
+
     useEffect(() => {
         const fetchBills = async () => {
             try {
-                const billsCollection = collection(db, "billing");
+                const billsCollection = collection(db, "invoicebilling");
                 const billsSnapshot = await getDocs(billsCollection);
-    
-               
-            
+
                 let totalSalesForMonth = 0;
                 const monthlySalesTemp = Array(12).fill(0);
-    
-      
-             
-    
+                const now = new Date();
+
                 billsSnapshot.forEach((doc) => {
                     const data = doc.data();
-    
-                    // Check if data.date exists and is valid
-                    if (!data.date) {
-                        console.warn("Missing or undefined date field for document:", doc.id);
-                        return; // Skip this document
+                    if (!data.date || !data.totalAmount) return;
+
+                    const billDate = data.date.toDate ? data.date.toDate() : new Date(data.date);
+                    const month = billDate.getMonth();
+                    const amount = parseFloat(data.totalAmount ?? 0);
+
+                    if (!isNaN(amount)) {
+                        monthlySalesTemp[month] += amount;
+
+                        if (
+                            billDate.getFullYear() === now.getFullYear() &&
+                            billDate.getMonth() === now.getMonth()
+                        ) {
+                            totalSalesForMonth += amount;
+                        }
                     }
-    
-                    // Convert Firestore Timestamp or string to Date
-                  
-    
-                    // const billDateStr = billDate.toISOString().split("T")[0]; // Format as "YYYY-MM-DD"
-    
-                    // Count unique customers
-                   
-    
-                    // Today's sales
-                  // Today's sales
-                  
-                    // Current month's sales
-                  
                 });
-    
-                // Update state with computed values
+
                 setTotalBills(billsSnapshot.size);
-             
                 setMonthSales(totalSalesForMonth);
                 setMonthlySales(monthlySalesTemp);
             } catch (error) {
-                console.error("Error fetching data:", error);
+                console.error("Error fetching bills:", error);
             }
         };
-    
+
         fetchBills();
     }, []);
-    
-    
+
     const toggleSidebar = () => {
         setIsOpen(!isOpen);
     };
 
-    // Chart data and options
     const chartData = {
-        labels: [
-            "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-        ],
+        labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
         datasets: [
             {
                 label: "Monthly Sales (₹)",
-                data: monthlySales, // Data for the chart
+                data: monthlySales,
                 backgroundColor: "rgba(75, 192, 192, 0.6)",
                 borderColor: "rgba(75, 192, 192, 1)",
                 borderWidth: 1,
@@ -196,8 +171,7 @@ const NewHome = () => {
                     <div className="card">
                         <div className="text-container">
                             <h3>Today Sales</h3>
-                            <p>₹{todaySales}</p>
-
+                            <p>₹{todaySales.toFixed(2)}</p>
                         </div>
                         <div className="image-container">
                             <img src={Card3} alt="Card 3" />
@@ -206,15 +180,16 @@ const NewHome = () => {
                     <div className="card">
                         <div className="text-container">
                             <h3>This Month</h3>
-                            <p>₹{monthSales}</p>
+                            <p>₹{monthSales.toFixed(2)}</p>
                         </div>
                         <div className="image-container">
                             <img src={Card22} alt="Card 4" />
                         </div>
                     </div>
                 </div>
+
                 <div style={{ marginTop: "20px", padding: "20px", width: "95%", height: "400px" }}>
-                    <SalesComparisonChart/>
+                    <SalesComparisonChart />
                 </div>
             </div>
         </div>

@@ -489,7 +489,37 @@ const generatePDFPage = (doc, copyType, invoiceNumber) => {
   tableBody.push(
     [{ content: 'Grand Total:', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, `${Math.round(billingDetails.grandTotal)}.00`]
   );
-
+tableBody.push(
+        [
+          { content: 'Despatched From:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff',  } }, // Bottom border for this cell
+          { content: despatchedFrom || 'N/A', colSpan: 4, styles: { fontStyle: 'normal', fillColor: '#fff',  } } // Bottom border for this cell
+        ],
+        [
+          { content: 'Despatched To:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff',  } }, // Bottom border for this cell
+          { content: despatchedTo || 'N/A', colSpan: 4, styles: { fontStyle: 'normal', fillColor: '#fff',  } } // Bottom border for this cell
+        ],
+        [
+          { content: 'Transport Name:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff', } }, // Bottom border for this cell
+          { content: transportName || 'N/A', colSpan: 4, styles: { fontStyle: 'normal', fillColor: '#fff',} } // Bottom border for this cell
+        ],
+        // [
+        //   { content: 'Transport GSTIN:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff',  } }, // Bottom border for this cell
+        //   { content: transportGSTIN || 'N/A', colSpan: 4, styles: { fontStyle: 'normal', fillColor: '#fff',  } } // Bottom border for this cell
+        // ],
+        // [
+        //   { content: 'LR No:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff', } }, // Bottom border for this cell
+        //   { content: lrNo || 'N/A', colSpan: 4, styles: { fontStyle: 'normal', fillColor: '#fff', } } // Bottom border for this cell
+        // ],
+        // [
+        //   { content: 'Transport Date:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff', } }, // Bottom border for this cell
+        //   { content: transportDate ? new Date(transportDate).toLocaleDateString() : 'N/A', colSpan: 4, styles: { fontStyle: 'normal', fillColor: '#fff',   } } // Bottom border for this cell
+        // ],
+       
+        // [
+        //   { content: 'Rupees:', colSpan: 1, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff', } }, // Bottom border for this cell
+        //   { content: `${grandTotalInWords}` || 'N/A', colSpan: 6, styles: { fontStyle: 'normal', fillColor: '#fff',textColor: [0, 0, 139],fontStyle: 'bold', } } // Bottom border for this cell
+        // ],
+      );
   doc.autoTable({
     head: [['S.No', 'Product Name', 'HSN Code', 'Quantity', 'Rate Per Price', 'Total']],
     body: tableBody,
@@ -1252,7 +1282,7 @@ return (
     value={transportName}
     onChange={(e) => setTransportName(e.target.value)}
   />
-  <label>Transport GSTIN</label>
+  {/* <label>Transport GSTIN</label>
   <input
     type="text"
     value={transportGSTIN}
@@ -1269,7 +1299,7 @@ return (
     type="date"
     value={transportDate}
     onChange={(e) => setTransportDate(e.target.value)}
-  />
+  /> */}
 </div>
 
 )}
