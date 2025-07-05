@@ -494,7 +494,7 @@ let startY = doc.autoTable.previous.finalY + 5;
   ['State', customerState, 'Bank Name', ''],
   ['Phone', customerPhoneNo, 'Branch', ''],
   ['GSTIN', customerGSTIN, 'IFSC Code', ''],
-  ['PAN', customerPan, '', '']
+  ['PAN', customerPan, '', ''] 
 ];
 
 doc.autoTable({
