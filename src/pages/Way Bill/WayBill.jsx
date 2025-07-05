@@ -207,19 +207,18 @@ const WayBill = () => {
     setCategory(event.target.value);
   };
 
-const handleQuantityChange = (productId, value) => {
-  const quantity = parseInt(value, 10);
-  setCart(prevCart =>
-    prevCart.map(item =>
+  const handleQuantityChange = (productId, quantity) => {
+    const updatedCart = cart.map(item =>
       item.productId === productId
-        ? { ...item, quantity: isNaN(quantity) ? 0 : quantity }
+        ? { ...item, quantity: parseInt(quantity, 10) || 0 }
         : item
-    )
-  );
-};
-
-
-  
+    );
+    setCart(updatedCart);
+    updateBillingDetails(updatedCart);
+  };
+  useEffect(() => {
+  updateBillingDetails(cart);
+}, [cart, billingDetails.discountPercentage, taxOption, customerState]);
   const updateBillingDetails = (updatedCart) => {
     const totalAmount = updatedCart.reduce((total, item) => {
       return total + (item.saleprice * item.quantity);
@@ -256,18 +255,18 @@ const handleQuantityChange = (productId, value) => {
       grandTotal,
     }));
   };
-    const updateProductQuantity = async (productId, purchaseQuantity) => {
-      const productRef = doc(db, 'products', productId);
-      const product = products.find(p => p.id === productId);
-      if (product) {
-        const newQuantity = product.quantity - purchaseQuantity;
-        if (newQuantity < 0) {
-          alert('Not enough stock available.');
-          return;
-        }
-        await updateDoc(productRef, { quantity: newQuantity });
+  const updateProductQuantity = async (productId, purchaseQuantity) => {
+    const productRef = doc(db, 'products', productId);
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      const newQuantity = product.quantity - purchaseQuantity;
+      if (newQuantity < 0) {
+        alert('Not enough stock available.');
+        return;
       }
-    };
+      await updateDoc(productRef, { quantity: newQuantity });
+    }
+  };
 
   const handleDiscountChange = (event) => {
     const discountPercentage = event.target.value;
@@ -439,14 +438,14 @@ const CustomerCopy = async () => {
   drawPageBorder();
 
   const headerTable = [
-  ['T.M.CRACKERS PARK', '', `Estimate Number: YC-${invoiceNumber}-25`],
+  ['T.M.CRACKERS PARK', '', `Estimate Number: SDC-${invoiceNumber}-25`],
   ['Address:1/90Z6, Balaji Nagar, Anna Colony', '',`Date: ${selectedDate.getDate().toString().padStart(2, '0')}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getFullYear()}` ],
   ['Vadamamalapuram ', '', ''],
   ['Thiruthangal - 626130', '', ''],
   ['Sivakasi (Zone)', '', ''],
   ['Virudhunagar (Dist)', '', ''],
   ['State: 33-Tamil Nadu', '', ''],
-  ['Phone number: 80567 49264', '', ''],
+  ['Phone number: 97514 87277 / 95853 58106', '', ''],
   
 ];
 
@@ -713,18 +712,25 @@ return productName.includes(term) || productCode.includes(term);
 
  const addToCart = (product) => {
   setCart(prevCart => {
-    const existing = prevCart.find(p => p.productId === product.productId);
-    if (existing) {
-      return prevCart.map(p =>
+    let updatedCart;
+    const exists = prevCart.find(p => p.productId === product.productId);
+    if (exists) {
+      updatedCart = prevCart.map(p =>
         p.productId === product.productId
           ? { ...p, quantity: p.quantity + 1 }
           : p
       );
     } else {
-      return [...prevCart, { ...product }];
+      updatedCart = [...prevCart, { ...product }];
     }
+
+    // Call updateBillingDetails with new cart
+    updateBillingDetails(updatedCart);
+
+    return updatedCart;
   });
 };
+
 
 
   const handleRemoveFromCart = (productId) => {
@@ -747,18 +753,15 @@ return productName.includes(term) || productCode.includes(term);
     console.log('Selected Date:', newSelectedDate);
     setSelectedDate(newSelectedDate);
   };
- const handlePriceChange = (productId, value) => {
-  const price = parseFloat(value);
-  setCart(prevCart =>
-    prevCart.map(item =>
+  const handlePriceChange = (productId, saleprice) => {
+    const updatedCart = cart.map(item =>
       item.productId === productId
-        ? { ...item, saleprice: isNaN(price) ? 0 : price }
+        ? { ...item, saleprice: parseFloat(saleprice) || 0 }
         : item
-    )
-  );
-};
-
-
+    );
+    setCart(updatedCart);
+    updateBillingDetails(updatedCart);
+  };
   
  
 
@@ -834,12 +837,12 @@ return (
       <li key={item.productId}>
         <div className="cart-item">
           <span>{item.name}</span>
-         <input
+          <input
   type="number"
   placeholder="Enter Quantity"
   value={item.quantity || ""}
   onChange={(e) => handleQuantityChange(item.productId, e.target.value)}
-    style={{
+   style={{
     width: '80px',
     padding: '10px',
     margin: '10px 0',
@@ -855,7 +858,7 @@ return (
   placeholder="Enter Price"
   value={item.saleprice || ""}
   onChange={(e) => handlePriceChange(item.productId, e.target.value)}
-    style={{
+  style={{
     width: '80px',
     padding: '10px',
     margin: '10px 0',
@@ -865,7 +868,6 @@ return (
     boxSizing: 'border-box', // ensures padding is included in width
   }}
 />
-
 
           <span style={{padding:"10px"}}>
             Rs.{" "}
