@@ -203,15 +203,15 @@ doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableSta
 const productList = detail.productDetails || detail.productsDetails || [];
 
 if (productList.length === 0) {
-  console.warn("⚠️ No products found in detail object:", detail);
+console.warn("⚠️ No products found in detail object:", detail);
 }
 
 const productTableBody = productList.map(item => [
-  item.name || 'N/A',
-  '36041000',
-  item.quantity?.toString() || '0',
-  `Rs.${item.saleprice?.toFixed(2) || '0.00'}`,
-  `Rs.${((item.quantity || 0) * (item.saleprice || 0)).toFixed(2)}`
+item.name || 'N/A',
+'36041000',
+item.quantity?.toString() || '0',
+`Rs.${item.saleprice?.toFixed(2) || '0.00'}`,
+`Rs.${((item.quantity || 0) * (item.saleprice || 0)).toFixed(2)}`
 ]);
 
 

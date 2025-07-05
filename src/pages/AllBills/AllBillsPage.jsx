@@ -158,7 +158,7 @@ doc.autoTable({
   body: [
     ['SRI DURGA CRACKERS', '', estimateType],
     ['Address:1/90Z6, Balaji Nagar, Anna Colony', '', `Estimate Number: SDC-${detail.invoiceNumber}-25`],
-    ['Vadamamalapuram ', '', `Date:`],
+    ['Vadamamalapuram ', '', `Date:${formattedDate}`],
     ['Thiruthangal - 626130', '', ''],
     ['Sivakasi (Zone)', '', ''],
     ['Virudhunagar (Dist)', '', ''],

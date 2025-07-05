@@ -207,15 +207,18 @@ const WayBill = () => {
     setCategory(event.target.value);
   };
 
-  const handleQuantityChange = (productId, quantity) => {
-    const updatedCart = cart.map(item =>
+const handleQuantityChange = (productId, value) => {
+  const quantity = parseInt(value, 10);
+  setCart(prevCart =>
+    prevCart.map(item =>
       item.productId === productId
-        ? { ...item, quantity: parseInt(quantity, 10) || 0 }
+        ? { ...item, quantity: isNaN(quantity) ? 0 : quantity }
         : item
-    );
-    setCart(updatedCart);
-    updateBillingDetails(updatedCart);
-  };
+    )
+  );
+};
+
+
   
   const updateBillingDetails = (updatedCart) => {
     const totalAmount = updatedCart.reduce((total, item) => {
@@ -253,18 +256,18 @@ const WayBill = () => {
       grandTotal,
     }));
   };
-  const updateProductQuantity = async (productId, purchaseQuantity) => {
-    const productRef = doc(db, 'products', productId);
-    const product = products.find(p => p.id === productId);
-    if (product) {
-      const newQuantity = product.quantity - purchaseQuantity;
-      if (newQuantity < 0) {
-        alert('Not enough stock available.');
-        return;
+    const updateProductQuantity = async (productId, purchaseQuantity) => {
+      const productRef = doc(db, 'products', productId);
+      const product = products.find(p => p.id === productId);
+      if (product) {
+        const newQuantity = product.quantity - purchaseQuantity;
+        if (newQuantity < 0) {
+          alert('Not enough stock available.');
+          return;
+        }
+        await updateDoc(productRef, { quantity: newQuantity });
       }
-      await updateDoc(productRef, { quantity: newQuantity });
-    }
-  };
+    };
 
   const handleDiscountChange = (event) => {
     const discountPercentage = event.target.value;
@@ -436,14 +439,13 @@ const CustomerCopy = async () => {
   drawPageBorder();
 
   const headerTable = [
-  ['T.M.CRACKERS PARK', '', `Estimate Number: SDC-${invoiceNumber}-25`],
-  ['Address:1/90Z6, Balaji Nagar, Anna Colony', '',`Date: ${selectedDate.getDate().toString().padStart(2, '0')}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getFullYear()}` ],
-  ['Vadamamalapuram ', '', ''],
-  ['Thiruthangal - 626130', '', ''],
-  ['Sivakasi (Zone)', '', ''],
-  ['Virudhunagar (Dist)', '', ''],
+  ['YELLOW CRACKERS', '', `Estimate Number: YC-${invoiceNumber}-25`],
+  ['Address:1/400 North Street M Duraisamypuram', '',`Date: ${selectedDate.getDate().toString().padStart(2, '0')}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getFullYear()}` ],
+  ['Mamsapuram (po) ', '', ''],
+  ['Sivakasi (TK)', '', ''],
+  ['Virudhunagar -626124', '', ''],
   ['State: 33-Tamil Nadu', '', ''],
-  ['Phone number: 97514 87277 / 95853 58106', '', ''],
+  ['Phone number: 80567 49264', '', ''],
   
 ];
 
@@ -487,11 +489,11 @@ let startY = doc.autoTable.previous.finalY + 5;
 
   const customerDetails = [
   ['TO', '', 'Account Details', ''], // Fixed: 4 columns
-  ['Name', customerName, 'A/c Holder Name', 'GOWTHAM'],
-  ['Address', customerAddress, 'A/c Number', '231100050309543'],
-  ['State', customerState, 'Bank Name', 'TAMILNAD MERCANTILE BANK'],
-  ['Phone', customerPhoneNo, 'Branch', 'THIRUTHANGAL'],
-  ['GSTIN', customerGSTIN, 'IFSC Code', 'TMBL0000231'],
+  ['Name', customerName, 'A/c Holder Name', ''],
+  ['Address', customerAddress, 'A/c Number', ''],
+  ['State', customerState, 'Bank Name', ''],
+  ['Phone', customerPhoneNo, 'Branch', ''],
+  ['GSTIN', customerGSTIN, 'IFSC Code', ''],
   ['PAN', customerPan, '', '']
 ];
 
@@ -575,15 +577,15 @@ doc.autoTable({
  
 tableBody.push(
         [
-          { content: 'Despatched From:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff',  } }, // Bottom border for this cell
+          { content: 'Despatched From:', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff',  } }, // Bottom border for this cell
           { content: despatchedFrom || 'N/A', colSpan: 4, styles: { fontStyle: 'normal', fillColor: '#fff',  } } // Bottom border for this cell
         ],
         [
-          { content: 'Despatched To:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff',  } }, // Bottom border for this cell
+          { content: 'Despatched To:', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff',  } }, // Bottom border for this cell
           { content: despatchedTo || 'N/A', colSpan: 4, styles: { fontStyle: 'normal', fillColor: '#fff',  } } // Bottom border for this cell
         ],
         [
-          { content: 'Transport Name:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff', } }, // Bottom border for this cell
+          { content: 'Transport Name:', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff', } }, // Bottom border for this cell
           { content: transportName || 'N/A', colSpan: 4, styles: { fontStyle: 'normal', fillColor: '#fff',} } // Bottom border for this cell
         ],
         // [
@@ -708,23 +710,21 @@ return productName.includes(term) || productCode.includes(term);
 };
  
 
-  const addToCart = (product) => {
-    // if (!product.inStock) {
-    //   alert("This product is out of stock.");
-    //   return;
-    // }
+ const addToCart = (product) => {
+  setCart(prevCart => {
+    const existing = prevCart.find(p => p.productId === product.productId);
+    if (existing) {
+      return prevCart.map(p =>
+        p.productId === product.productId
+          ? { ...p, quantity: p.quantity + 1 }
+          : p
+      );
+    } else {
+      return [...prevCart, { ...product }];
+    }
+  });
+};
 
-    const newItem = {
-      productId: product.id,
-      name: product.name,
-      saleprice: product.saleprice,
-      quantity: 1
-    };
-
-    const updatedCart = [...cart, newItem];
-    setCart(updatedCart);
-    updateBillingDetails(updatedCart);
-  };
 
   const handleRemoveFromCart = (productId) => {
     // Find the index of the first item with the matching productId
@@ -746,15 +746,18 @@ return productName.includes(term) || productCode.includes(term);
     console.log('Selected Date:', newSelectedDate);
     setSelectedDate(newSelectedDate);
   };
-  const handlePriceChange = (productId, saleprice) => {
-    const updatedCart = cart.map(item =>
+ const handlePriceChange = (productId, value) => {
+  const price = parseFloat(value);
+  setCart(prevCart =>
+    prevCart.map(item =>
       item.productId === productId
-        ? { ...item, saleprice: parseFloat(saleprice) || 0 }
+        ? { ...item, saleprice: isNaN(price) ? 0 : price }
         : item
-    );
-    setCart(updatedCart);
-    updateBillingDetails(updatedCart);
-  };
+    )
+  );
+};
+
+
   
  
 
@@ -830,12 +833,12 @@ return (
       <li key={item.productId}>
         <div className="cart-item">
           <span>{item.name}</span>
-          <input
+         <input
   type="number"
   placeholder="Enter Quantity"
   value={item.quantity || ""}
   onChange={(e) => handleQuantityChange(item.productId, e.target.value)}
-   style={{
+    style={{
     width: '80px',
     padding: '10px',
     margin: '10px 0',
@@ -851,7 +854,7 @@ return (
   placeholder="Enter Price"
   value={item.saleprice || ""}
   onChange={(e) => handlePriceChange(item.productId, e.target.value)}
-  style={{
+    style={{
     width: '80px',
     padding: '10px',
     margin: '10px 0',
@@ -861,6 +864,7 @@ return (
     boxSizing: 'border-box', // ensures padding is included in width
   }}
 />
+
 
           <span style={{padding:"10px"}}>
             Rs.{" "}
