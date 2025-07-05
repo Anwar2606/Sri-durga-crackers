@@ -439,11 +439,12 @@ const CustomerCopy = async () => {
   drawPageBorder();
 
   const headerTable = [
-  ['YELLOW CRACKERS', '', `Estimate Number: YC-${invoiceNumber}-25`],
-  ['Address:1/400 North Street M Duraisamypuram', '',`Date: ${selectedDate.getDate().toString().padStart(2, '0')}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getFullYear()}` ],
-  ['Mamsapuram (po) ', '', ''],
-  ['Sivakasi (TK)', '', ''],
-  ['Virudhunagar -626124', '', ''],
+  ['T.M.CRACKERS PARK', '', `Estimate Number: YC-${invoiceNumber}-25`],
+  ['Address:1/90Z6, Balaji Nagar, Anna Colony', '',`Date: ${selectedDate.getDate().toString().padStart(2, '0')}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getFullYear()}` ],
+  ['Vadamamalapuram ', '', ''],
+  ['Thiruthangal - 626130', '', ''],
+  ['Sivakasi (Zone)', '', ''],
+  ['Virudhunagar (Dist)', '', ''],
   ['State: 33-Tamil Nadu', '', ''],
   ['Phone number: 80567 49264', '', ''],
   
