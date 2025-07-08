@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, updateDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, updateDoc, doc, Timestamp, deleteDoc } from 'firebase/firestore';
 import { db, firestore } from '../firebase'; // Adjust the path to your Firebase config
-import { FaDownload, FaEdit, FaTruck } from 'react-icons/fa'; // For Edit icon
+import { FaDownload, FaEdit, FaTrash, FaTruck } from 'react-icons/fa'; // For Edit icon
 import { jsPDF } from 'jspdf'; // Import jsPDF for generating PDFs
 import { 
   FaHome, FaInfoCircle, FaServicestack, FaEnvelope, 
@@ -29,7 +29,7 @@ const RetailEditBillPage = () => {
   useEffect(() => {
     const fetchBills = async () => {
       try {
-        const billingSnapshot = await getDocs(collection(db, 'retailBilling'));
+        const billingSnapshot = await getDocs(collection(db, 'retailbilling'));
         const billingData = billingSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         // const customerBillingSnapshot = await getDocs(collection(db, 'customerBilling'));
@@ -167,7 +167,7 @@ const handleInputChange = (e, index = null, type = null) => {
   };
   const updateBillInFirestore = async (id, updatedDetails) => {
   try {
-    const docRef = doc(db, "retailBilling", id);
+    const docRef = doc(db, "retailbilling", id);
     await updateDoc(docRef, updatedDetails);
     alert("Bill updated successfully!");
   } catch (error) {
@@ -302,30 +302,44 @@ const pageWidth = doc.internal.pageSize.getWidth();
     doc.setLineWidth(0.2);
     doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableStartY);
 
-  const customerTable = [
-    ['TO', '', 'Account Details', ''],
-    ['Name', customer.customerName || 'N/A', 'A/c Holder Name', 'GOWTHAM'],
-    ['Address', customer.customerAddress || 'N/A', 'A/c Number', '231100050309543'],
-    ['State', customer.customerState || 'N/A', 'Bank Name', 'TAMILNAD MERCANTILE BANK'],
-    ['Phone', customer.customerPhone || 'N/A', 'Branch', 'THIRUTHANGAL'],
-    ['GSTIN', customer.customerGSTIN || 'N/A', 'IFSC Code', 'TMBL0000231'],
-    ['PAN', customer.customerPAN || 'N/A', '', '']
-  ];
+  let startY = doc.autoTable.previous?.finalY + 5 || 70;
 
-  doc.autoTable({
-    body: customerTable,
-    startY: doc.autoTable.previous.finalY + 5,
-    theme: 'grid',
-    styles: { fontSize: 9,lineColor: [0, 0, 0], textColor:[0,0,0] },
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 30 },
-      1: { cellWidth: 60 },
-      2: { fontStyle: 'bold', cellWidth: 35 },
-      3: { cellWidth: 57 }
-    },
-    margin: { left: 14, right: 14 },
-    didDrawPage: drawPageBorder
-  });
+const customerDetails = [
+  ['TO'],
+  [`Name: ${customer.customerName}`],
+  [`Address: ${customer.customerAddress}`],
+  [`State: ${customer.customerState}`],
+  [`Phone: ${customer.customerPhoneNo}`],
+  [`GSTIN: ${customer.customerGSTIN}`],
+  [`PAN: ${customer.customerPan}`]
+];
+
+const customerStartY = startY;
+
+doc.autoTable({
+  body: customerDetails,
+  startY: customerStartY,
+  theme: 'plain',
+  styles: { fontSize: 9 },
+  margin: { left: 15, right: 15 },
+  columnStyles: {
+    0: { cellWidth: 180, fontStyle: 'bold' }
+  },
+  didParseCell: function (data) {
+    if (data.row.index === 0) {
+      data.cell.styles.textColor = [204, 0, 102]; // Pinkish red
+      data.cell.styles.fontSize = 11;
+      data.cell.styles.fontStyle = 'bold';
+    }
+  }
+});
+
+// Draw surrounding rectangle like header style
+const customerEndY = doc.autoTable.previous.finalY;
+doc.setDrawColor(0);
+doc.setLineWidth(0.1);
+doc.rect(14, customerStartY - 2, 182, customerEndY - customerStartY + 4);
+
 
   const tableBody = bill.productsDetails.map(item => {
     const saleprice = parseFloat(item.saleprice) || 0;
@@ -470,7 +484,30 @@ doc.save(`EST R-${bill.invoiceNumber}-25.pdf`);
       grandTotal: hasTaxableProducts ? grandTotal : newTotalAmount,
     }));
   };
-  
+  const handleDelete = async (id) => {
+            // Display confirmation dialog
+            const isConfirmed = window.confirm("Are you sure you want to delete this bill?");
+          
+            if (!isConfirmed) {
+              return; // Exit if the user cancels
+            }
+          
+            try {
+              // Delete from 'billing' collection
+              const billingDocRef = doc(db, 'retailbilling', id);
+              await deleteDoc(billingDocRef);
+          
+              // Delete from 'customerBilling' collection
+              
+          
+              // Update the state to remove the deleted bill from the UI
+              setBills(prevBills => prevBills.filter(bill => bill.id !== id));
+          
+              console.log(`Document with id ${id} deleted from both billing and customerBilling collections.`);
+            } catch (error) {
+              console.error('Error deleting bill: ', error.message);
+            }
+          };
   return (
     <div className="edit-bill-page">
       <div className="main-container2">
@@ -480,7 +517,7 @@ doc.save(`EST R-${bill.invoiceNumber}-25.pdf`);
         {/* Main Content */}
         <div className="content">
           <div className="all-bills-page">
-            <h1>Edit Invoice Bills</h1>
+            <h1>Edit Retail Bills</h1>
             <table className="products-table">
               <thead>
                 <tr>
@@ -504,9 +541,14 @@ doc.save(`EST R-${bill.invoiceNumber}-25.pdf`);
                         onClick={() => handleEdit(bill)}
                       />
                       <FaDownload
-                        className="delete-icon"
+                        className="download-icon"
+                        style={{color:"green"}}
                         onClick={() => downloadAllCopies(bill)}
                       />
+                       <FaTrash
+                         className="delete-icon"
+                         onClick={() => handleDelete(bill.id)}
+                                                                  />
                     </td>
                   </tr>
                 ))}

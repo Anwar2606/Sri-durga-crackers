@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, updateDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, updateDoc, doc, Timestamp, deleteDoc } from 'firebase/firestore';
 import { db, firestore } from '../firebase'; // Adjust the path to your Firebase config
-import { FaDownload, FaEdit, FaTruck } from 'react-icons/fa'; // For Edit icon
+import { FaDownload, FaEdit, FaTrash, FaTruck } from 'react-icons/fa'; // For Edit icon
 import { jsPDF } from 'jspdf'; // Import jsPDF for generating PDFs
 import { 
   FaHome, FaInfoCircle, FaServicestack, FaEnvelope, 
@@ -19,7 +19,7 @@ import Sidebar from '../Sidebar/Sidebar';
 // const tamilFontBase64 = "4K644K+N4K6w4K+AIOCuquCviuCuqeCvjSDgrofgrrDgr4HgrrPgrqrgr43grqog4K6a4K+B4K614K6+4K6u4K6/IOCupOCvgeCuo+CviA=="; // Replace with your Base64 font string
 
 
-const WayBillEditBillPage = () => {
+const WayBillEditPage = () => {
   const [bills, setBills] = useState([]);
    const [isOpen, setIsOpen] = useState(true);
   const [editBill, setEditBill] = useState(null); // Stores the selected bill for editing
@@ -29,7 +29,7 @@ const WayBillEditBillPage = () => {
   useEffect(() => {
     const fetchBills = async () => {
       try {
-        const billingSnapshot = await getDocs(collection(db, 'wayBilling'));
+        const billingSnapshot = await getDocs(collection(db, 'waybilling'));
         const billingData = billingSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         // const customerBillingSnapshot = await getDocs(collection(db, 'customerBilling'));
@@ -51,15 +51,13 @@ const handleEdit = (bill) => {
   setUpdatedDetails({ ...bill });
   setIsModalOpen(true);
 
-  // ✅ Safe fallback for undefined productsDetails
-  const updatedProducts = (bill.productsDetails || []).map((product) => ({
+  // Calculate initial totals
+  const updatedProducts = bill.productsDetails.map((product) => ({
     ...product,
     total: (product.quantity || 0) * (product.saleprice || 0),
   }));
-
   setUpdatedDetails({ ...bill, productsDetails: updatedProducts });
 };
-
 
 
 //   const handleInputChange = (e, index, field) => {
@@ -169,7 +167,7 @@ const handleInputChange = (e, index = null, type = null) => {
   };
   const updateBillInFirestore = async (id, updatedDetails) => {
   try {
-    const docRef = doc(db, "wayBilling", id);
+    const docRef = doc(db, "waybilling", id);
     await updateDoc(docRef, updatedDetails);
     alert("Bill updated successfully!");
   } catch (error) {
@@ -179,13 +177,10 @@ const handleInputChange = (e, index = null, type = null) => {
   const handleSubmit = () => {
   const updatedData = { ...updatedDetails };
 
+  // Make sure no undefined or null values are passed
   console.log("Final data to send:", updatedData);
 
-  if (!Array.isArray(bills)) {
-    console.error("❌ bills is undefined or not an array:", bills);
-    return;
-  }
-
+  // Update local state
   const updatedBills = bills.map((bill) =>
     bill.id === updatedData.id ? { ...bill, ...updatedData } : bill
   );
@@ -196,8 +191,6 @@ const handleInputChange = (e, index = null, type = null) => {
   // Save to Firestore
   updateBillInFirestore(updatedData.id, updatedData);
 };
-
-
 
 
   // Function to generate and download PDF copies for a specific bill
@@ -243,110 +236,130 @@ const formatDate = (createdAt) => {
       ? createdAtDate.toLocaleDateString() // Returns only the date portion (e.g., "8/27/2024")
       : 'Invalid Date';
   };
-const downloadSingleCopy = (bill) => {
-  const doc = new jsPDF();
-  const numberToWords = require('number-to-words');
+const downloadAllCopies = (bill) => {
+
+ const doc = new jsPDF();
+const copies = ['Transport Copy'];
+const numberToWords = require('number-to-words');
+
+const drawPageBorder = () => {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const borderMargin = 10;
-
-  // Page border
-  const drawPageBorder = () => {
-    doc.setDrawColor(0);
+ const drawPageBorder = () => {
+    doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.2);
     doc.rect(borderMargin, borderMargin, pageWidth - 2 * borderMargin, pageHeight - 2 * borderMargin);
   };
+  doc.setDrawColor(0);
+  doc.setLineWidth(0.2);
+  doc.rect(borderMargin, borderMargin, pageWidth - 2 * borderMargin, pageHeight - 2 * borderMargin);
+};
+
+copies.forEach((copyType, index) => {
+  if (index > 0) doc.addPage();
 
   const formattedDate = formatDate(bill.createdAt);
   const customer = bill;
-
-  // 🔲 Border for full page
-  drawPageBorder();
-
-  let headerTableStartY = 12;
-  let headerTableEndY = 0;
-
-  // Header Table
-  doc.autoTable({
-    body: [
-      ['T.M.CRACKERS PARK', '', `Invoice Number: SDC-${bill.invoiceNumber}-25`],
-      ['Address:1/90Z6, Balaji Nagar, Anna Colony', '', `Date: ${formattedDate}`],
-      ['Vadamamalapuram ', '','' ],
-      ['Thiruthangal - 626130', '', ''],
-      ['Sivakasi (Zone)', '', ''],
-      ['Virudhunagar (Dist)', '', ''],
-      ['State: 33-Tamil Nadu', '', ''],
-      ['Phone number: 97514 87277 / 95853 58106', '', '']
-    ],
-    startY: headerTableStartY,
-    theme: 'plain',
-    styles: { fontSize: 9 },
-    margin: { left: 14, right: 14 },
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 80 },
-      1: { cellWidth: 37 },
-      2: { fontStyle: 'bold', halign: 'right', cellWidth: 60 }
-    },
-    didParseCell: (data) => {
-      if (data.row.index === 0) {
-        data.cell.styles.textColor = [255, 0, 0];
-        data.cell.styles.fontSize = 11;
-        data.cell.styles.fontStyle = 'bold';
+ let headerTableStartY = 12;
+    let headerTableEndY = 0;
+ doc.autoTable({
+      body: [
+    ['T.M.CRACKERS PARK', '','TAX INVOICE' ],
+  ['Address:1/90Z6, Balaji Nagar, Anna Colony', '',`Estimate Number: SDC-${bill.invoiceNumber}-25`],
+  ['Vadamamalapuram ', '', `Date: ${formattedDate}` ],
+  ['Thiruthangal - 626130', '', ''],
+  ['Sivakasi (Zone)', '', ''],
+  ['Virudhunagar (Dist)', '', ''],
+  ['State: 33-Tamil Nadu', '', ''],
+  ['Phone number: 97514 87277 / 95853 58106', '', ''],
+      ],
+      startY: headerTableStartY,
+      theme: 'plain',
+      styles: { fontSize: 9 },
+      margin: { left: 14, right: 14 },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 80 },
+        1: { cellWidth: 37 },
+        2: { fontStyle: 'bold', halign: 'right', cellWidth: 60 }
+      },
+      didParseCell: (data) => {
+        if (data.row.index === 0) {
+          data.cell.styles.textColor = [255, 0, 0];
+          data.cell.styles.fontSize = 11;
+          data.cell.styles.fontStyle = 'bold';
+        }
+      },
+      didDrawPage: drawPageBorder,
+      didDrawCell: (data) => {
+        if (data.row.index === 7 && data.column.index === 2) {
+          headerTableEndY = data.cell.y + data.cell.height;
+        }
       }
-    },
-    didDrawCell: (data) => {
-      if (data.row.index === 7 && data.column.index === 2) {
-        headerTableEndY = data.cell.y + data.cell.height;
-      }
+    });
+const pageWidth = doc.internal.pageSize.getWidth();
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.2);
+    doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableStartY);
+
+  let startY = doc.autoTable.previous?.finalY + 5 || 70;
+
+const customerDetails = [
+  ['TO'],
+  [`Name: ${customer.customerName}`],
+  [`Address: ${customer.customerAddress}`],
+  [`State: ${customer.customerState}`],
+  [`Phone: ${customer.customerPhoneNo}`],
+  [`GSTIN: ${customer.customerGSTIN}`],
+  [`PAN: ${customer.customerPan}`]
+];
+
+const customerStartY = startY;
+
+doc.autoTable({
+  body: customerDetails,
+  startY: customerStartY,
+  theme: 'plain',
+  styles: { fontSize: 9 },
+  margin: { left: 15, right: 15 },
+  columnStyles: {
+    0: { cellWidth: 180, fontStyle: 'bold' }
+  },
+  didParseCell: function (data) {
+    if (data.row.index === 0) {
+      data.cell.styles.textColor = [204, 0, 102]; // Pinkish red
+      data.cell.styles.fontSize = 11;
+      data.cell.styles.fontStyle = 'bold';
     }
+  }
+});
+
+// Draw surrounding rectangle like header style
+const customerEndY = doc.autoTable.previous.finalY;
+doc.setDrawColor(0);
+doc.setLineWidth(0.1);
+doc.rect(14, customerStartY - 2, 182, customerEndY - customerStartY + 4);
+
+
+  const tableBody = bill.productsDetails.map(item => {
+    const saleprice = parseFloat(item.saleprice) || 0;
+    const quantity = parseFloat(item.quantity) || 0;
+    return [
+      item.name || 'N/A',
+      '36041000',
+      quantity.toString(),
+      `Rs.${saleprice.toFixed(2)}`,
+      `Rs.${(saleprice * quantity).toFixed(2)}`
+    ];
   });
-
-  // Draw rectangle around header table
-  doc.setDrawColor(0);
-  doc.setLineWidth(0.2);
-  doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableStartY);
-
-  // Customer Table
-  const customerTable = [
-    ['TO', '', 'Account Details', ''],
-    ['Name', customer.customerName || 'N/A', 'A/c Holder Name', 'GOWTHAM'],
-    ['Address', customer.customerAddress || 'N/A', 'A/c Number', '231100050309543'],
-    ['State', customer.customerState || 'N/A', 'Bank Name', 'TAMILNAD MERCANTILE BANK'],
-    ['Phone', customer.customerPhone || 'N/A', 'Branch', 'THIRUTHANGAL'],
-    ['GSTIN', customer.customerGSTIN || 'N/A', 'IFSC Code', 'TMBL0000231'],
-    ['PAN', customer.customerPAN || 'N/A', '', '']
-  ];
-
-  doc.autoTable({
-    body: customerTable,
-    startY: doc.autoTable.previous.finalY + 5,
-    theme: 'grid',
-    styles: { fontSize: 9, lineColor: [0, 0, 0], textColor: [0, 0, 0] },
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 30 },
-      1: { cellWidth: 60 },
-      2: { fontStyle: 'bold', cellWidth: 35 },
-      3: { cellWidth: 57 }
-    },
-    margin: { left: 14, right: 14 }
-  });
-
-  // Products Table
-   const productTableBody = bill.productsDetails.map(item => [
-    item.name || 'N/A',
-    '36041000',
-    item.quantity?.toString() || '0',
-    `Rs.${item.saleprice?.toFixed(2) || '0.00'}`,
-    `Rs.${((item.quantity || 0) * (item.saleprice || 0)).toFixed(2)}`
-  ]);
 
   doc.autoTable({
     head: [['Product Name', 'HSN CODE', 'Quantity', 'Price', 'Total Amount']],
-    body: productTableBody,
+    body: tableBody,
     startY: doc.autoTable.previous.finalY + 5,
     theme: 'grid',
     headStyles: { fillColor: [255, 182, 193], textColor: [0, 0, 139] },
-    styles: { fontSize: 10, lineColor: [0, 0, 0], textColor: [0, 0, 0] },
+    styles: { fontSize: 10,lineColor: [0, 0, 0],textColor:[0,0,0] },
     columnStyles: {
       0: { halign: 'left' },
       1: { halign: 'center' },
@@ -354,10 +367,10 @@ const downloadSingleCopy = (bill) => {
       3: { halign: 'right' },
       4: { halign: 'right' }
     },
-    margin: { left: 14, right: 14 }
+    margin: { left: 14, right: 14 },
+    didDrawPage: drawPageBorder
   });
 
-  // Summary Table
   const totalAmount = `Rs.${bill.totalAmount?.toFixed(2) || '0.00'}`;
   const grandTotal = `Rs.${bill.grandTotal || '0.00'}`;
 
@@ -368,66 +381,72 @@ const downloadSingleCopy = (bill) => {
     ],
     startY: doc.autoTable.previous.finalY + 5,
     theme: 'grid',
-    styles: { fontSize: 10, textColor: [0, 0, 0], lineColor: [0, 0, 0] },
+    styles: { fontSize: 10 ,textColor:[0,0,0],lineColor:[0,0,0]},
     columnStyles: {
       0: { halign: 'left', fontStyle: 'bold' },
       1: { halign: 'right' }
     },
-    margin: { left: 14, right: 14 }
+    margin: { left: 14, right: 14 },
+    didDrawPage: drawPageBorder
   });
 
-  // Amount in words
   const inWords = numberToWords.toWords(bill.grandTotal || 0);
   doc.autoTable({
     body: [[`Rupees: ${inWords.toUpperCase()}`]],
     startY: doc.autoTable.previous.finalY + 3,
     theme: 'plain',
     styles: { fontSize: 10, fontStyle: 'bold', textColor: [0, 0, 139] },
-    margin: { left: 15 }
-  });
-
-  // Terms & Conditions
-  const termsStartY = doc.autoTable.previous.finalY + 2;
-  let termsEndY = 0;
-
-  doc.autoTable({
-    body: [
-      ['Terms & Conditions'],
-      ['1. Goods once sold will not be taken back.'],
-      ['2. All matters subject to "Sivakasi" jurisdiction only.']
-    ],
-    startY: termsStartY,
-    theme: 'plain',
-    styles: { fontSize: 9 },
     margin: { left: 15 },
-    didDrawCell: function (data) {
-      if (data.row.index === 2 && data.column.index === 0) {
-        termsEndY = data.cell.y + data.cell.height;
-      }
+    didDrawPage: drawPageBorder
+  });
+
+  let termsStartY = doc.autoTable.previous.finalY + 2;
+let termsEndY = 0; // will be set later
+
+// Terms & Conditions Table
+doc.autoTable({
+  body: [
+    ['Terms & Conditions'],
+    ['1. Goods once sold will not be taken back.'],
+    ['2. All matters subject to "Sivakasi" jurisdiction only.']
+  ],
+  startY: termsStartY,
+  theme: 'plain',
+  didDrawPage: drawPageBorder,
+  styles: { fontSize: 9 },
+  margin: { left: 15 },
+  didDrawCell: function (data) {
+    // Capture bottom Y of last row
+    if (data.row.index === 2 && data.column.index === 0) {
+      termsEndY = data.cell.y + data.cell.height;
     }
-  });
+  }
+});
 
-  // Signature Row
-  doc.autoTable({
-    body: [['', '', 'Authorised Signature']],
-    startY: doc.autoTable.previous.finalY + 2,
-    theme: 'plain',
-    styles: { fontSize: 10, fontStyle: 'bold' },
-    columnStyles: {
-      2: { halign: 'right' }
-    },
-    margin: { left: 15, right: 15 }
-  });
+// Authorised Signature Table (placed just below terms)
+doc.autoTable({
+  body: [['', '', 'Authorised Signature']],
+  startY: doc.autoTable.previous.finalY + 2,
+  theme: 'plain',
+  didDrawPage: drawPageBorder,
+  styles: { fontSize: 10, fontStyle: 'bold' },
+  columnStyles: {
+    2: { halign: 'right' }
+  },
+  margin: { left: 15, right: 15 }
+});
 
-  // Rectangle for Terms & Signature section
-  doc.setDrawColor(0);
-  doc.setLineWidth(0.2);
-  doc.rect(15, termsStartY, pageWidth - 30, doc.autoTable.previous.finalY + 10 - termsStartY);
+// 🔲 Draw the rectangle after both tables
+doc.setDrawColor(0);
+doc.setLineWidth(0.2);
+doc.rect(15, termsStartY, doc.internal.pageSize.getWidth() - 30, doc.autoTable.previous.finalY + 10 - termsStartY);
+  
+});
 
-  // Save the file
-  doc.save(`EST W-${bill.invoiceNumber}-25.pdf`);
-};
+doc.save(`WAY BILL-${bill.invoiceNumber}.pdf`);
 
+
+  };
   const handleRemoveProduct = (index) => {
     const updatedProducts = [...updatedDetails.productsDetails];
   
@@ -465,7 +484,31 @@ const downloadSingleCopy = (bill) => {
       grandTotal: hasTaxableProducts ? grandTotal : newTotalAmount,
     }));
   };
-  
+   const handleDelete = async (id) => {
+      // Display confirmation dialog
+      const isConfirmed = window.confirm("Are you sure you want to delete this bill?");
+    
+      if (!isConfirmed) {
+        return; // Exit if the user cancels
+      }
+    
+      try {
+        // Delete from 'billing' collection
+        const billingDocRef = doc(db, 'waybilling', id);
+        await deleteDoc(billingDocRef);
+    
+        // Delete from 'customerBilling' collection
+        
+    
+        // Update the state to remove the deleted bill from the UI
+        setBills(prevBills => prevBills.filter(bill => bill.id !== id));
+    
+        console.log(`Document with id ${id} deleted from both billing and customerBilling collections.`);
+      } catch (error) {
+        console.error('Error deleting bill: ', error.message);
+      }
+    };
+    
   return (
     <div className="edit-bill-page">
       <div className="main-container2">
@@ -475,7 +518,7 @@ const downloadSingleCopy = (bill) => {
         {/* Main Content */}
         <div className="content">
           <div className="all-bills-page">
-            <h1>Edit Wholesale Bills</h1>
+            <h1>Edit Way Bills</h1>
             <table className="products-table">
               <thead>
                 <tr>
@@ -499,9 +542,14 @@ const downloadSingleCopy = (bill) => {
                         onClick={() => handleEdit(bill)}
                       />
                       <FaDownload
-                        className="delete-icon"
-                        onClick={() => downloadSingleCopy(bill)}
+                        className="download-icon"
+                        style={{color:"green"}}
+                        onClick={() => downloadAllCopies(bill)}
                       />
+                      <FaTrash
+                                              className="delete-icon"
+                                              onClick={() => handleDelete(bill.id)}
+                                            />
                     </td>
                   </tr>
                 ))}
@@ -555,36 +603,37 @@ const downloadSingleCopy = (bill) => {
                     onChange={(e) => handleInputChange(e)}
                   />
                   <h3>Products</h3>
-                 {(updatedDetails.productsDetails || []).map((product, index) => (
-  <div key={index}>
-    <label>Product Name:</label>
-    <input
-      type="text"
-      name="name"
-      value={product.name || ""}
-      onChange={(e) => handleInputChange(e, index, "product")}
-    />
-    <label>Quantity:</label>
-    <input
-      type="number"
-      name="quantity"
-      value={product.quantity || ""}
-      onChange={(e) => handleInputChange(e, index, "product")}
-    />
-    <label>Price:</label>
-    <input
-      type="number"
-      name="saleprice"
-      value={product.saleprice || ""}
-      onChange={(e) => handleInputChange(e, index, "product")}
-    />
-    <label>Total:</label>
-    <input
-      type="number"
-      name="total"
-      value={product.total || 0}
-      readOnly
-    />
+                  {updatedDetails.productsDetails.map((product, index) => (
+                    <div key={index}>
+                      <label>Product Name:</label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={product.name || ""}
+                        onChange={(e) => handleInputChange(e, index, "product")}
+                      />
+                      <label>Quantity:</label>
+                      <input
+                        type="number"
+                        name="quantity"
+                        value={product.quantity || ""}
+                        onChange={(e) => handleInputChange(e, index, "product")}
+                      />
+                      <label>Price:</label>
+                      <input
+                        type="number"
+                        name="saleprice"
+                        value={product.saleprice || ""}
+                        onChange={(e) => handleInputChange(e, index, "product")}
+                      />
+                      <label>Total:</label>
+                      <input
+  type="number"
+  name="total"
+  value={product.total || 0}
+  readOnly
+/>
+
 
 <button
   type="button"
@@ -647,4 +696,4 @@ const downloadSingleCopy = (bill) => {
   
 };
 
-export default WayBillEditBillPage;
+export default WayBillEditPage;

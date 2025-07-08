@@ -426,35 +426,44 @@ const generatePDFPage = (doc, copyType, invoiceNumber) => {
   doc.rect(14, headerStartY - 2, 182, headerEndY - headerStartY + 4);
 
   // Customer Details
-  let startY = doc.autoTable.previous.finalY + 5;
+ let startY = doc.autoTable.previous?.finalY + 5 || 70;
 
-  const customerDetails = [
-    ['TO', '', 'Account Details', ''],
-    ['Name', customerName, 'A/c Holder Name', 'GOWTHAM'],
-    ['Address', customerAddress, 'A/c Number', '231100050309543'],
-    ['State', customerState, 'Bank Name', 'TAMILNAD MERCANTILE BANK'],
-    ['Phone', customerPhoneNo, 'Branch', 'THIRUTHANGAL'],
-    ['GSTIN', customerGSTIN, 'IFSC Code', 'TMBL0000231'],
-    ['PAN', customerPan, '', '']
-  ];
+const customerDetails = [
+  ['TO'],
+  [`Name: ${customerName}`],
+  [`Address: ${customerAddress}`],
+  [`State: ${customerState}`],
+  [`Phone: ${customerPhoneNo}`],
+  [`GSTIN: ${customerGSTIN}`],
+  [`PAN: ${customerPan}`]
+];
 
-  doc.autoTable({
-    body: customerDetails,
-    startY,
-    theme: 'grid',
-    styles: { fontSize: 9, textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.2 },
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 25 },
-      1: { cellWidth: 60 },
-      2: { fontStyle: 'bold', cellWidth: 35 },
-      3: { cellWidth: 62 }
-    },
-    didDrawCell: (data) => {
-      if (data.cell.section === 'body') {
-        data.cell.styles.lineWidth = { top: 0, bottom: 0, left: 0.2, right: 0.2 };
-      }
+const customerStartY = startY;
+
+doc.autoTable({
+  body: customerDetails,
+  startY: customerStartY,
+  theme: 'plain',
+  styles: { fontSize: 9 },
+  margin: { left: 15, right: 15 },
+  columnStyles: {
+    0: { cellWidth: 180, fontStyle: 'bold' }
+  },
+  didParseCell: function (data) {
+    if (data.row.index === 0) {
+      data.cell.styles.textColor = [204, 0, 102]; // Pinkish red
+      data.cell.styles.fontSize = 11;
+      data.cell.styles.fontStyle = 'bold';
     }
-  });
+  }
+});
+
+// Draw surrounding rectangle like header style
+const customerEndY = doc.autoTable.previous.finalY;
+doc.setDrawColor(0);
+doc.setLineWidth(0.1);
+doc.rect(14, customerStartY - 2, 182, customerEndY - customerStartY + 4);
+
 
   // Products Table
   startY = doc.autoTable.previous.finalY + 5;
@@ -732,48 +741,44 @@ const CustomerCopy = async () => {
  doc.rect(rectX, rectY, rectWidth, rectHeight); // ⬅️ Rectangle around entire headerTable
  
  
- let startY = doc.autoTable.previous.finalY + 5;
- 
-   const customerDetails = [
-   ['TO', '', 'Account Details', ''], // Fixed: 4 columns
-   ['Name', customerName, 'A/c Holder Name', 'Gowtham'],
-   ['Address', customerAddress, 'A/c Number', '231100050309543'],
-   ['State', customerState, 'Bank Name', 'Tamilnad Mercantile Bank'],
-   ['Phone', customerPhoneNo, 'Branch', 'Thiruthangal'],
-   ['GSTIN', customerGSTIN, 'IFSC Code', 'TMBL0000231'],
-   ['PAN', customerPan, '', '']
- ];
- 
- 
- doc.autoTable({
-   body: customerDetails,
-   startY,
-   theme: 'grid',
-   styles: {
-     fontSize: 9,
-     textColor: [0, 0, 0],
-     lineColor: [0, 0, 0],
-     lineWidth: 0.2
-   },
-   columnStyles: {
-     0: { fontStyle: 'bold', cellWidth: 25 },
-     1: { cellWidth: 60 },
-     2: { fontStyle: 'bold', cellWidth: 35 },
-     3: { cellWidth: 62 }
-   },
-   didDrawCell: function (data) {
-     // Remove top and bottom borders (row lines)
-     if (data.cell.section === 'body') {
-       data.cell.styles.lineWidth = {
-         top: 0,
-         bottom: 0,
-         left: 0.2,
-         right: 0.2
-       };
-     }
-   }
- });
- 
+ let startY = doc.autoTable.previous?.finalY + 5 || 70;
+
+const customerDetails = [
+  ['TO'],
+  [`Name: ${customerName}`],
+  [`Address: ${customerAddress}`],
+  [`State: ${customerState}`],
+  [`Phone: ${customerPhoneNo}`],
+  [`GSTIN: ${customerGSTIN}`],
+  [`PAN: ${customerPan}`]
+];
+
+const customerStartY = startY;
+
+doc.autoTable({
+  body: customerDetails,
+  startY: customerStartY,
+  theme: 'plain',
+  styles: { fontSize: 9 },
+  margin: { left: 15, right: 15 },
+  columnStyles: {
+    0: { cellWidth: 180, fontStyle: 'bold' }
+  },
+  didParseCell: function (data) {
+    if (data.row.index === 0) {
+      data.cell.styles.textColor = [204, 0, 102]; // Pinkish red
+      data.cell.styles.fontSize = 11;
+      data.cell.styles.fontStyle = 'bold';
+    }
+  }
+});
+
+// Draw surrounding rectangle like header style
+const customerEndY = doc.autoTable.previous.finalY;
+doc.setDrawColor(0);
+doc.setLineWidth(0.1);
+doc.rect(14, customerStartY - 2, 182, customerEndY - customerStartY + 4);
+
  
  
  
@@ -817,7 +822,38 @@ const CustomerCopy = async () => {
   tableBody.push(
     [{ content: 'Grand Total:', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, `${Math.round(billingDetails.grandTotal)}.00`]
   );
- 
+ tableBody.push(
+        [
+          { content: 'Despatched From:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff',  } }, // Bottom border for this cell
+          { content: despatchedFrom || 'N/A', colSpan: 4, styles: { fontStyle: 'normal', fillColor: '#fff',  } } // Bottom border for this cell
+        ],
+        [
+          { content: 'Despatched To:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff',  } }, // Bottom border for this cell
+          { content: despatchedTo || 'N/A', colSpan: 4, styles: { fontStyle: 'normal', fillColor: '#fff',  } } // Bottom border for this cell
+        ],
+        [
+          { content: 'Transport Name:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff', } }, // Bottom border for this cell
+          { content: transportName || 'N/A', colSpan: 4, styles: { fontStyle: 'normal', fillColor: '#fff',} } // Bottom border for this cell
+        ],
+        // [
+        //   { content: 'Transport GSTIN:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff',  } }, // Bottom border for this cell
+        //   { content: transportGSTIN || 'N/A', colSpan: 4, styles: { fontStyle: 'normal', fillColor: '#fff',  } } // Bottom border for this cell
+        // ],
+        // [
+        //   { content: 'LR No:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff', } }, // Bottom border for this cell
+        //   { content: lrNo || 'N/A', colSpan: 4, styles: { fontStyle: 'normal', fillColor: '#fff', } } // Bottom border for this cell
+        // ],
+        // [
+        //   { content: 'Transport Date:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff', } }, // Bottom border for this cell
+        //   { content: transportDate ? new Date(transportDate).toLocaleDateString() : 'N/A', colSpan: 4, styles: { fontStyle: 'normal', fillColor: '#fff',   } } // Bottom border for this cell
+        // ],
+       
+        // [
+        //   { content: 'Rupees:', colSpan: 1, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff', } }, // Bottom border for this cell
+        //   { content: `${grandTotalInWords}` || 'N/A', colSpan: 6, styles: { fontStyle: 'normal', fillColor: '#fff',textColor: [0, 0, 139],fontStyle: 'bold', } } // Bottom border for this cell
+        // ],
+      );
+
    doc.autoTable({
    head: [['S.No', 'Product Name','HSN Code', 'Quantity', 'Rate Per Price', 'Total']],
    body: tableBody,
@@ -900,7 +936,7 @@ const CustomerCopy = async () => {
  
 
 
-doc.save(`invoice_${invoiceNumber}_CUSTOMERCOPY.pdf`);
+doc.save(`TAX INVOICE - ${invoiceNumber}.pdf`);
 
 };
 

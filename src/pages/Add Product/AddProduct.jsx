@@ -53,14 +53,14 @@ const AddProduct = () => {
       <div className="form-wrapper">
         <h2>Add Product</h2>
         <form onSubmit={handleAddProduct} className="product-form">
-          <input type="text" placeholder="S.No" value={sno} onChange={(e) => setSno(e.target.value)} required />
-          <input type="text" placeholder="Product Name" value={name} onChange={(e) => setName(e.target.value)} required />
-          <input type="text" placeholder="In Stock" value={inStock} onChange={(e) => setInStock(e.target.value)} required />
-          <input type="number" placeholder="Sale Price" value={saleprice} onChange={(e) => setSalePrice(e.target.value)} required />
-          <input type="number" placeholder="Regular Price" value={regularprice} onChange={(e) => setRegularPrice(e.target.value)} required />
-          <input type="number" placeholder="Quantity" value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
-          <input type="text" placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} required />
-          <input type="text" placeholder="Bill" value={bill} onChange={(e) => setBill(e.target.value)} required />
+          <input type="text" placeholder="S.No" value={sno} onChange={(e) => setSno(e.target.value)}  />
+          <input type="text" placeholder="Product Name" value={name} onChange={(e) => setName(e.target.value)} />
+          <input type="text" placeholder="In Stock" value={inStock} onChange={(e) => setInStock(e.target.value)}  />
+          <input type="number" placeholder="Sale Price" value={saleprice} onChange={(e) => setSalePrice(e.target.value)}  />
+          <input type="number" placeholder="Regular Price" value={regularprice} onChange={(e) => setRegularPrice(e.target.value)}  />
+          <input type="number" placeholder="Quantity" value={quantity} onChange={(e) => setQuantity(e.target.value)}  />
+          <input type="text" placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)}  />
+          <input type="text" placeholder="Bill" value={bill} onChange={(e) => setBill(e.target.value)}  />
           <button type="submit">Add Product</button>
         </form>
       </div>

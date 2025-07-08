@@ -135,9 +135,9 @@ let headerTableEndY = 0; // Will be set dynamically
 
 doc.autoTable({
   body: [
-    ['T.M.CRACKERS PARK', '', `Estimate Number: SDC-${detail.invoiceNumber}-25`],
-    ['Address:1/90Z6, Balaji Nagar, Anna Colony', '', `Date:${formattedDate}`],
-    ['Vadamamalapuram ', '', ''],
+    ['T.M.CRACKERS PARK', '','TAX INVOICE' ],
+    ['Address:1/90Z6, Balaji Nagar, Anna Colony', '',`Invoice Number: TMCP-${detail.invoiceNumber}-25` ],
+    ['Vadamamalapuram ', '', `Date:${formattedDate}`],
     ['Thiruthangal - 626130', '', ''],
     ['Sivakasi (Zone)', '', ''],
     ['Virudhunagar (Dist)', '', ''],
@@ -177,28 +177,44 @@ doc.setLineWidth(0.2);
 doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableStartY);
 
 
-  const customerAccountTable = [
-    ['TO', '', 'Account Details', ''],
-    ['Name', clean(customerName), 'A/c Holder Name', 'GOWTHAM'],
-    ['Address', clean(customerAddress), 'A/c Number', '231100050309543'],
-    ['State', clean(customerState), 'Bank Name', 'TAMILNAD MERCANTILE BANK'],
-    ['Phone', clean(customerPhoneNo), 'Branch', 'THIRUTHANGAL'],
-    ['GSTIN', clean(customerGSTIN), 'IFSC Code', 'TMBL0000231'],
-    ['PAN', clean(customerPan), '', '']
-  ];
+ let startY = doc.autoTable.previous?.finalY + 5 || 70;
 
-  doc.autoTable({
-    body: customerAccountTable,
-    startY: doc.autoTable.previous.finalY + 2,
-    theme: 'grid',
-    didDrawPage: drawPageBorder,
-    styles: { fontSize: 9, textColor: [0, 0, 0],lineColor:[0,0,0] },
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 30 },
-      1: { cellWidth: 60 },
-      2: { fontStyle: 'bold', cellWidth: 35 },
+const customerDetails = [
+  ['TO'],
+  [`Name: ${customerName}`],
+  [`Address: ${customerAddress}`],
+  [`State: ${customerState}`],
+  [`Phone: ${customerPhoneNo}`],
+  [`GSTIN: ${customerGSTIN}`],
+  [`PAN: ${customerPan}`]
+];
+
+const customerStartY = startY;
+
+doc.autoTable({
+  body: customerDetails,
+  startY: customerStartY,
+  theme: 'plain',
+  styles: { fontSize: 9 },
+  margin: { left: 15, right: 15 },
+  columnStyles: {
+    0: { cellWidth: 180, fontStyle: 'bold' }
+  },
+  didParseCell: function (data) {
+    if (data.row.index === 0) {
+      data.cell.styles.textColor = [204, 0, 102]; // Pinkish red
+      data.cell.styles.fontSize = 11;
+      data.cell.styles.fontStyle = 'bold';
     }
-  });
+  }
+});
+
+// Draw surrounding rectangle like header style
+const customerEndY = doc.autoTable.previous.finalY;
+doc.setDrawColor(0);
+doc.setLineWidth(0.1);
+doc.rect(14, customerStartY - 2, 182, customerEndY - customerStartY + 4);
+
 
 const productList = detail.productDetails || detail.productsDetails || [];
 
@@ -380,7 +396,7 @@ item.quantity?.toString() || '0',
   
     try {
       // Delete from 'billing' collection
-      const billingDocRef = doc(db, 'billing', id);
+      const billingDocRef = doc(db, 'wayBilling', id);
       await deleteDoc(billingDocRef);
   
       // Delete from 'customerBilling' collection
@@ -405,7 +421,7 @@ item.quantity?.toString() || '0',
       {/* Main Content */}
       <div className="content">
         <div className="all-bills-page">
-          <h1>Wholesale Bills</h1>
+          <h1>Way Bills</h1>
           <div className="date-filter">
           <label style={{ fontSize: '16px', fontWeight: 'bold', marginRight: '10px' }}>
   Select Date:
@@ -448,7 +464,7 @@ item.quantity?.toString() || '0',
                         className="delete-icon"
                         onClick={() => handleDelete(bill.id)}
                       />
-                       <FaShareAlt
+                       {/* <FaShareAlt
     className="share-icon"
     onClick={() => handleShare(bill)}
     style={{ cursor: 'pointer', marginLeft: '10px', color: '#1b73e8' }}
@@ -457,7 +473,7 @@ item.quantity?.toString() || '0',
                       className="print-icon"
                       onClick={() => handlePrint(bill)}
                       style={{ cursor: "pointer", marginLeft: "10px", color: "#ff5722" }}
-                    />
+                    /> */}
                     </td>
                   </tr>
                 );

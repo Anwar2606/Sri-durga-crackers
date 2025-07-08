@@ -70,7 +70,7 @@ const AddCustomer = () => {
                 value={customerDetails.customerName}
                 onChange={handleChange}
                 className="Edit-input1"
-                required
+                
               />
             </label>
             <label>
@@ -81,7 +81,7 @@ const AddCustomer = () => {
                 value={customerDetails.customerAddress}
                 onChange={handleChange}
                 className="Edit-input1"
-                required
+                
               />
             </label>
             <label>
@@ -92,7 +92,7 @@ const AddCustomer = () => {
                 value={customerDetails.customerState}
                 onChange={handleChange}
                 className="Edit-input1"
-                required
+                
               />
             </label>
             <label>
@@ -103,7 +103,7 @@ const AddCustomer = () => {
                 value={customerDetails.customerPhoneNo}
                 onChange={handleChange}
                 className="Edit-input1"
-                required
+                
               />
             </label>
             <label>

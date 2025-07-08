@@ -63,7 +63,7 @@ useEffect(() => {
     const fetchBills = async () => {
       try {
         // Fetch bills from 'billing' collection
-        const billingSnapshot = await getDocs(collection(db, 'retailBilling'));
+        const billingSnapshot = await getDocs(collection(db, 'retailbilling'));
         const billingData = billingSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         // Fetch bills from 'customerBilling' collection
@@ -176,30 +176,44 @@ doc.setDrawColor(0);
 doc.setLineWidth(0.2);
 doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableStartY);
 
+let startY = doc.autoTable.previous?.finalY + 5 || 70;
 
-  const customerAccountTable = [
-    ['TO', '', 'Account Details', ''],
-    ['Name', clean(customerName), 'A/c Holder Name', 'GOWTHAM'],
-    ['Address', clean(customerAddress), 'A/c Number', '231100050309543'],
-    ['State', clean(customerState), 'Bank Name', 'TAMILNAD MERCANTILE BANK'],
-    ['Phone', clean(customerPhoneNo), 'Branch', 'THIRUTHANGAL'],
-    ['GSTIN', clean(customerGSTIN), 'IFSC Code', 'TMBL0000231'],
-    ['PAN', clean(customerPan), '', '']
-  ];
+const customerDetails = [
+  ['TO'],
+  [`Name: ${customerName}`],
+  [`Address: ${customerAddress}`],
+  [`State: ${customerState}`],
+  [`Phone: ${customerPhoneNo}`],
+  [`GSTIN: ${customerGSTIN}`],
+  [`PAN: ${customerPan}`]
+];
 
-  doc.autoTable({
-    body: customerAccountTable,
-    startY: doc.autoTable.previous.finalY + 2,
-    theme: 'grid',
-    didDrawPage: drawPageBorder,
-    styles: { fontSize: 9, textColor: [0, 0, 0], lineColor: [0, 0, 0] },
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 30 },
-      1: { cellWidth: 60 },
-      2: { fontStyle: 'bold', cellWidth: 35 },
-      3: { cellWidth: 57 }
+const customerStartY = startY;
+
+doc.autoTable({
+  body: customerDetails,
+  startY: customerStartY,
+  theme: 'plain',
+  styles: { fontSize: 9 },
+  margin: { left: 15, right: 15 },
+  columnStyles: {
+    0: { cellWidth: 180, fontStyle: 'bold' }
+  },
+  didParseCell: function (data) {
+    if (data.row.index === 0) {
+      data.cell.styles.textColor = [204, 0, 102]; // Pinkish red
+      data.cell.styles.fontSize = 11;
+      data.cell.styles.fontStyle = 'bold';
     }
-  });
+  }
+});
+
+// Draw surrounding rectangle like header style
+const customerEndY = doc.autoTable.previous.finalY;
+doc.setDrawColor(0);
+doc.setLineWidth(0.1);
+doc.rect(14, customerStartY - 2, 182, customerEndY - customerStartY + 4);
+
 
   const productTableBody = detail.productsDetails.map(item => [
     item.name || 'N/A',
@@ -374,13 +388,11 @@ doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableSta
   
     try {
       // Delete from 'billing' collection
-      const billingDocRef = doc(db, 'billing', id);
+      const billingDocRef = doc(db, 'retailbilling', id);
       await deleteDoc(billingDocRef);
   
       // Delete from 'customerBilling' collection
-      const customerBillingDocRef = doc(db, 'customerBilling', id);
-      await deleteDoc(customerBillingDocRef);
-  
+     
       // Update the state to remove the deleted bill from the UI
       setBills(prevBills => prevBills.filter(bill => bill.id !== id));
   
@@ -442,7 +454,7 @@ doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableSta
                         className="delete-icon"
                         onClick={() => handleDelete(bill.id)}
                       />
-                       <FaShareAlt
+                       {/* <FaShareAlt
     className="share-icon"
     onClick={() => handleShare(bill)}
     style={{ cursor: 'pointer', marginLeft: '10px', color: '#1b73e8' }}
@@ -451,7 +463,7 @@ doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableSta
                       className="print-icon"
                       onClick={() => handlePrint(bill)}
                       style={{ cursor: "pointer", marginLeft: "10px", color: "#ff5722" }}
-                    />
+                    /> */}
                     </td>
                   </tr>
                 );
