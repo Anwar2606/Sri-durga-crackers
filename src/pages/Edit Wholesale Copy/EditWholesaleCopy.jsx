@@ -243,7 +243,6 @@ const downloadSingleCopy = (bill) => {
   const pageHeight = doc.internal.pageSize.getHeight();
   const borderMargin = 10;
 
-  // Page border
   const drawPageBorder = () => {
     doc.setDrawColor(0);
     doc.setLineWidth(0.2);
@@ -253,13 +252,12 @@ const downloadSingleCopy = (bill) => {
   const formattedDate = formatDate(bill.createdAt);
   const customer = bill;
 
-  // 🔲 Border for full page
   drawPageBorder();
 
   let headerTableStartY = 12;
   let headerTableEndY = 0;
 
-  // Header Table
+  // Header
   doc.autoTable({
     body: [
       ['SRI DURGA CRACKERS', '', 'Estimate For Wholesale'],
@@ -294,100 +292,117 @@ const downloadSingleCopy = (bill) => {
     }
   });
 
-  // Draw rectangle around header table
-  doc.setDrawColor(0);
-  doc.setLineWidth(0.2);
   doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableStartY);
 
-  // Customer Table
+  // Customer
   let startY = doc.autoTable.previous?.finalY + 5 || 70;
+  const customerStartY = startY;
 
-const customerDetails = [
-  ['TO'],
-  [`Name: ${customer.customerName}`],
-  [`Address: ${customer.customerAddress}`],
-  [`State: ${customer.customerState}`],
-  [`Phone: ${customer.customerPhoneNo}`],
-  [`GSTIN: ${customer.customerGSTIN}`],
-  [`PAN: ${customer.customerPan}`]
-];
+  const customerDetails = [
+    ['TO'],
+    [`Name: ${customer.customerName}`],
+    [`Address: ${customer.customerAddress}`],
+    [`State: ${customer.customerState}`],
+    [`Phone: ${customer.customerPhoneNo}`],
+    [`GSTIN: ${customer.customerGSTIN}`],
+    [`PAN: ${customer.customerPan}`]
+  ];
 
-const customerStartY = startY;
-
-doc.autoTable({
-  body: customerDetails,
-  startY: customerStartY,
-  theme: 'plain',
-  styles: { fontSize: 9 },
-  margin: { left: 15, right: 15 },
-  columnStyles: {
-    0: { cellWidth: 180, fontStyle: 'bold' }
-  },
-  didParseCell: function (data) {
-    if (data.row.index === 0) {
-      data.cell.styles.textColor = [204, 0, 102]; // Pinkish red
-      data.cell.styles.fontSize = 11;
-      data.cell.styles.fontStyle = 'bold';
+  doc.autoTable({
+    body: customerDetails,
+    startY: customerStartY,
+    theme: 'plain',
+    styles: { fontSize: 9 },
+    margin: { left: 15, right: 15 },
+    columnStyles: {
+      0: { cellWidth: 180, fontStyle: 'bold' }
+    },
+    didParseCell: function (data) {
+      if (data.row.index === 0) {
+        data.cell.styles.textColor = [204, 0, 102];
+        data.cell.styles.fontSize = 11;
+        data.cell.styles.fontStyle = 'bold';
+      }
     }
-  }
+  });
+
+  doc.rect(14, customerStartY - 2, 182, doc.autoTable.previous.finalY - customerStartY + 4);
+
+  // Products
+ const tableBody = bill.productsDetails.map(item => {
+  const saleprice = parseFloat(item.saleprice) || 0;
+  const quantity = parseFloat(item.quantity) || 0;
+  return [
+    item.name || 'N/A',
+    '36041000',
+    quantity.toString(),
+    `Rs.${saleprice.toFixed(2)}`,
+    `Rs.${(saleprice * quantity).toFixed(2)}`
+  ];
 });
 
-// Draw surrounding rectangle like header style
-const customerEndY = doc.autoTable.previous.finalY;
-doc.setDrawColor(0);
-doc.setLineWidth(0.1);
-doc.rect(14, customerStartY - 2, 182, customerEndY - customerStartY + 4);
+// Calculate summary values
+const totalAmount = `Rs.${bill.totalAmount?.toFixed(2) || '0.00'}`;
+const grandTotal = `Rs.${bill.grandTotal?.toFixed(2) || '0.00'}`;
+const totalProducts = bill.productsDetails.length;
+const totalQuantity = bill.productsDetails.reduce((acc, item) => acc + (parseFloat(item.quantity) || 0), 0);
+const despatchedFrom = bill.despatchedFrom || 'N/A';
+const despatchedTo = bill.despatchedTo || 'N/A';
+const transportName = bill.transportName || 'N/A';
 
-  // Products Table
-  const tableBody = bill.productsDetails.map(item => {
-    const saleprice = parseFloat(item.saleprice) || 0;
-    const quantity = parseFloat(item.quantity) || 0;
-    return [
-      item.name || 'N/A',
-      '36041000',
-      quantity.toString(),
-      `Rs.${saleprice.toFixed(2)}`,
-      `Rs.${(saleprice * quantity).toFixed(2)}`
-    ];
-  });
+// 👇 Append summaries to the product table (same structure, 5 columns)
+tableBody.push(
+  [
+    { content: 'Total Amount:', colSpan: 2, styles: { fontStyle: 'bold', halign: 'left' } },
+    { content: totalAmount, colSpan: 3, styles: { halign: 'right' } }
+  ],
+  [
+    { content: 'Grand Total:', colSpan: 2, styles: { fontStyle: 'bold', halign: 'left' } },
+    { content: grandTotal, colSpan: 3, styles: { halign: 'right' } }
+  ],
+  [
+    { content: 'Total Products:', colSpan: 2, styles: { fontStyle: 'bold', halign: 'left' } },
+    { content: totalProducts.toString(), styles: { halign: 'right' } },
+    { content: 'Total Quantity:', styles: { fontStyle: 'bold', halign: 'right' } },
+    { content: totalQuantity.toString(), styles: { halign: 'right' } }
+  ],
 
-  doc.autoTable({
-    head: [['Product Name', 'HSN CODE', 'Quantity', 'Price', 'Total Amount']],
-    body: tableBody,
-    startY: doc.autoTable.previous.finalY + 5,
-    theme: 'grid',
-    headStyles: { fillColor: [255, 182, 193], textColor: [0, 0, 139] },
-    styles: { fontSize: 10, lineColor: [0, 0, 0], textColor: [0, 0, 0] },
-    columnStyles: {
-      0: { halign: 'left' },
-      1: { halign: 'center' },
-      2: { halign: 'right' },
-      3: { halign: 'right' },
-      4: { halign: 'right' }
-    },
-    margin: { left: 14, right: 14 }
-  });
+  [
+    { content: 'Despatched From:', colSpan: 2, styles: { fontStyle: 'bold', halign: 'left' } },
+    { content: despatchedFrom, colSpan: 3, styles: { halign: 'left' } }
+  ],
+  [
+    { content: 'Despatched To:', colSpan: 2, styles: { fontStyle: 'bold', halign: 'left' } },
+    { content: despatchedTo, colSpan: 3, styles: { halign: 'left' } }
+  ],
+  [
+    { content: 'Transport Name:', colSpan: 2, styles: { fontStyle: 'bold', halign: 'left' } },
+    { content: transportName, colSpan: 3, styles: { halign: 'left' } }
+  ],
+  
+);
 
-  // Summary Table
-  const totalAmount = `Rs.${bill.totalAmount?.toFixed(2) || '0.00'}`;
-  const grandTotal = `Rs.${bill.grandTotal || '0.00'}`;
 
-  doc.autoTable({
-    body: [
-      ['Total Amount', totalAmount],
-      ['Grand Total', grandTotal]
-    ],
-    startY: doc.autoTable.previous.finalY + 5,
-    theme: 'grid',
-    styles: { fontSize: 10, textColor: [0, 0, 0], lineColor: [0, 0, 0] },
-    columnStyles: {
-      0: { halign: 'left', fontStyle: 'bold' },
-      1: { halign: 'right' }
-    },
-    margin: { left: 14, right: 14 }
-  });
+// 🧾 Draw the final product table with all values
+doc.autoTable({
+  head: [['Product Name', 'HSN CODE', 'Quantity', 'Price', 'Total Amount']],
+  body: tableBody,
+  startY: doc.autoTable.previous.finalY + 5,
+  theme: 'grid',
+  headStyles: { fillColor: [255, 182, 193], textColor: [0, 0, 139] },
+  styles: { fontSize: 10, lineColor: [0, 0, 0], textColor: [0, 0, 0] },
+  columnStyles: {
+    0: { halign: 'left' },
+    1: { halign: 'center' },
+    2: { halign: 'right' },
+    3: { halign: 'right' },
+    4: { halign: 'right' }
+  },
+  margin: { left: 14, right: 14 }
+});
 
-  // Amount in words
+
+  // Rupees in words
   const inWords = numberToWords.toWords(bill.grandTotal || 0);
   doc.autoTable({
     body: [[`Rupees: ${inWords.toUpperCase()}`]],
@@ -397,7 +412,7 @@ doc.rect(14, customerStartY - 2, 182, customerEndY - customerStartY + 4);
     margin: { left: 15 }
   });
 
-  // Terms & Conditions
+  // Terms
   const termsStartY = doc.autoTable.previous.finalY + 2;
   let termsEndY = 0;
 
@@ -418,7 +433,7 @@ doc.rect(14, customerStartY - 2, 182, customerEndY - customerStartY + 4);
     }
   });
 
-  // Signature Row
+  // Signature
   doc.autoTable({
     body: [['', '', 'Authorised Signature']],
     startY: doc.autoTable.previous.finalY + 2,
@@ -430,12 +445,12 @@ doc.rect(14, customerStartY - 2, 182, customerEndY - customerStartY + 4);
     margin: { left: 15, right: 15 }
   });
 
-  // Rectangle for Terms & Signature section
+  // Rectangle below terms
   doc.setDrawColor(0);
   doc.setLineWidth(0.2);
   doc.rect(15, termsStartY, pageWidth - 30, doc.autoTable.previous.finalY + 10 - termsStartY);
 
-  // Save the file
+  // Save
   doc.save(`EST W-${bill.invoiceNumber}-25.pdf`);
 };
 

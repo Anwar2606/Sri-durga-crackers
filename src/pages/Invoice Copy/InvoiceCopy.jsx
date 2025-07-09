@@ -111,25 +111,32 @@ const generatePDF = async (detail) => {
   const numberToWords = require('number-to-words');
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
   const borderMargin = 10;
 
   const drawPageBorder = () => {
     doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.2);
-    doc.rect(borderMargin, borderMargin, pageWidth - 2 * borderMargin, pageHeight - 2 * borderMargin);
+    doc.rect(borderMargin, borderMargin, pageWidth - 2 * borderMargin, doc.internal.pageSize.getHeight() - 2 * borderMargin);
   };
 
-  const clean = (val) => (val === undefined ? '' : val);
   const formattedDate = formatDate(detail.createdAt);
+  const clean = (val) => (val === undefined ? '' : val);
+
   const {
     customerName,
     customerAddress,
+    customerEmail,
     customerState,
     customerPhoneNo,
     customerGSTIN,
-    customerPan
+    customerPan,
+    despatchedFrom,
+    despatchedTo,
+    transportName
   } = detail;
+
+  const totalQuantity = detail.productsDetails.reduce((acc, item) => acc + (item.quantity || 0), 0);
+  const totalProducts = detail.productsDetails.length;
 
   const copyTypes = ['Transport', 'Sales', 'Office', 'Customer'];
 
@@ -142,8 +149,8 @@ const generatePDF = async (detail) => {
 
     doc.autoTable({
       body: [
-        ['T.M.CRACKERS PARK', '','TAX INVOICE' ],
-        ['Address:1/90Z6, Balaji Nagar, Anna Colony', '',`${copyType.toUpperCase()} COPY` ],
+        ['T.M.CRACKERS PARK', '', 'TAX INVOICE'],
+        ['Address:1/90Z6, Balaji Nagar, Anna Colony', '', `${copyType.toUpperCase()} COPY`],
         ['Vadamamalapuram', '', `Invoice Number: SDC-${detail.invoiceNumber}-25`],
         ['Thiruthangal - 626130', '', `Date: ${formattedDate}`],
         ['Sivakasi (Zone)', '', 'GSTIN: 33AAVFT8036C1ZZ'],
@@ -175,49 +182,37 @@ const generatePDF = async (detail) => {
       }
     });
 
-    doc.setDrawColor(0);
-    doc.setLineWidth(0.2);
     doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableStartY);
 
-    let startY = doc.autoTable.previous?.finalY + 5 || 70;
+    const customerStartY = doc.autoTable.previous.finalY + 5;
+    doc.autoTable({
+      body: [
+        ['TO'],
+        [`Name: ${customerName}`],
+        [`Company name: ${customerEmail}`],
+        [`Address: ${customerAddress}`],
+        [`State: ${customerState}`],
+        [`Phone: ${customerPhoneNo}`],
+        [`GSTIN: ${customerGSTIN}`],
+        [`PAN: ${customerPan}`]
+      ],
+      startY: customerStartY,
+      theme: 'plain',
+      styles: { fontSize: 9 },
+      margin: { left: 15, right: 15 },
+      columnStyles: { 0: { cellWidth: 180, fontStyle: 'bold' } },
+      didParseCell: (data) => {
+        if (data.row.index === 0) {
+          data.cell.styles.textColor = [204, 0, 102];
+          data.cell.styles.fontSize = 11;
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    });
+    doc.rect(14, customerStartY - 2, 182, doc.autoTable.previous.finalY - customerStartY + 4);
 
-const customerDetails = [
-  ['TO'],
-  [`Name: ${customerName}`],
-  [`Address: ${customerAddress}`],
-  [`State: ${customerState}`],
-  [`Phone: ${customerPhoneNo}`],
-  [`GSTIN: ${customerGSTIN}`],
-  [`PAN: ${customerPan}`]
-];
-
-const customerStartY = startY;
-
-doc.autoTable({
-  body: customerDetails,
-  startY: customerStartY,
-  theme: 'plain',
-  styles: { fontSize: 9 },
-  margin: { left: 15, right: 15 },
-  columnStyles: {
-    0: { cellWidth: 180, fontStyle: 'bold' }
-  },
-  didParseCell: function (data) {
-    if (data.row.index === 0) {
-      data.cell.styles.textColor = [204, 0, 102]; // Pinkish red
-      data.cell.styles.fontSize = 11;
-      data.cell.styles.fontStyle = 'bold';
-    }
-  }
-});
-
-// Draw surrounding rectangle like header style
-const customerEndY = doc.autoTable.previous.finalY;
-doc.setDrawColor(0);
-doc.setLineWidth(0.1);
-doc.rect(14, customerStartY - 2, 182, customerEndY - customerStartY + 4);
-
-    const productTableBody = detail.productsDetails.map(item => [
+    const productTableBody = detail.productsDetails.map((item, index) => [
+      index + 1,
       item.name || 'N/A',
       '36041000',
       item.quantity?.toString() || '0',
@@ -226,48 +221,74 @@ doc.rect(14, customerStartY - 2, 182, customerEndY - customerStartY + 4);
     ]);
 
     doc.autoTable({
-      head: [['Product Name', 'HSN CODE', 'Quantity', 'Price', 'Total Amount']],
+      head: [['S.No', 'Product Name', 'HSN CODE', 'Quantity', 'Price', 'Total Amount']],
       body: productTableBody,
       startY: doc.autoTable.previous.finalY + 2,
       theme: 'grid',
       didDrawPage: drawPageBorder,
       headStyles: { fillColor: [255, 182, 193], textColor: [0, 0, 139], lineWidth: 0.2 },
       alternateRowStyles: { fillColor: [245, 245, 245] },
-      styles: { fontSize: 10, lineColor: [0, 0, 0], },
+      styles: { fontSize: 10, lineColor: [0, 0, 0] },
       columnStyles: {
-        0: { halign: 'left' },
-        1: { halign: 'center' },
-        2: { halign: 'right' },
+        0: { halign: 'center' },
+        1: { halign: 'left' },
+        2: { halign: 'center' },
         3: { halign: 'right' },
-        4: { halign: 'right' }
+        4: { halign: 'right' },
+        5: { halign: 'right' }
       }
     });
 
-   
     const totalAmount = `Rs.${detail.totalAmount?.toFixed(2) || '0.00'}`;
-const discountedAmount = `Rs.${detail.discountedTotal?.toFixed(2) || '0.00'}`;
-const cgstAmount = `Rs.${detail.cgstAmount?.toFixed(2) || '0.00'}`;
-const sgstAmount = `Rs.${detail.sgstAmount?.toFixed(2) || '0.00'}`;
-const igstAmount = `Rs.${detail.igstAmount?.toFixed(2) || '0.00'}`;
-const grandTotal = `Rs.${detail.grandTotal?.toFixed(2) || '0.00'}`;
+    const discountedAmount = `Rs.${detail.discountedTotal?.toFixed(2) || '0.00'}`;
+    const cgstAmount = `Rs.${detail.cgstAmount?.toFixed(2) || '0.00'}`;
+    const sgstAmount = `Rs.${detail.sgstAmount?.toFixed(2) || '0.00'}`;
+    const igstAmount = `Rs.${detail.igstAmount?.toFixed(2) || '0.00'}`;
+    const grandTotal = `Rs.${detail.grandTotal?.toFixed(2) || '0.00'}`;
 
-doc.autoTable({
+    doc.autoTable({
+      body: [
+        ['Total Amount', totalAmount],
+        ['Discounted Amount', discountedAmount],
+        ['CGST (9%)', cgstAmount],
+        ['SGST (9%)', sgstAmount],
+        ['IGST (18%)', igstAmount],
+        ['Grand Total', grandTotal]
+      ],
+      startY: doc.autoTable.previous.finalY + 1,
+      theme: 'grid',
+      styles: { fontSize: 10, lineColor: [0, 0, 0] },
+      columnStyles: {
+        0: { halign: 'left', fontStyle: 'bold' },
+        1: { halign: 'right' }
+      }
+    });
+
+  doc.autoTable({
   body: [
-    ['Total Amount', totalAmount],
-    ['Discounted Amount', discountedAmount],
-    ['CGST (9%)', cgstAmount],
-    ['SGST (9%)', sgstAmount],
-    ['IGST (18%)', igstAmount],
-    ['Grand Total', grandTotal]
+    [
+      { content: 'Total Products:', colSpan: 2, styles: { halign: 'left', fontStyle: 'bold' } },
+      { content: totalProducts.toString(), colSpan: 1, styles: { halign: 'right', fontStyle: 'bold' } },
+      { content: 'Total Quantity:', colSpan: 2, styles: { halign: 'right', fontStyle: 'bold' } },
+      { content: totalQuantity.toString(), colSpan: 1, styles: { halign: 'right', fontStyle: 'bold' } }
+    ],
+    [
+      { content: 'Despatched From:', colSpan: 3, styles: { halign: 'left', fontStyle: 'bold' } },
+      { content: despatchedFrom || 'N/A', colSpan: 3, styles: { halign: 'right' } }
+    ],
+    [
+      { content: 'Despatched To:', colSpan: 3, styles: { halign: 'left', fontStyle: 'bold' } },
+      { content: despatchedTo || 'N/A', colSpan: 3, styles: { halign: 'right' } }
+    ],
+    [
+      { content: 'Transport Name:', colSpan: 3, styles: { halign: 'left', fontStyle: 'bold' } },
+      { content: transportName || 'N/A', colSpan: 3, styles: { halign: 'right' } }
+    ]
   ],
-  startY: doc.autoTable.previous.finalY + 1,
+  startY: doc.autoTable.previous.finalY + 2,
   theme: 'grid',
-  didDrawPage: drawPageBorder,
-  styles: { fontSize: 10, lineColor: [0, 0, 0], },
-  columnStyles: {
-    0: { halign: 'left', fontStyle: 'bold' },
-    1: { halign: 'right' }
-  }
+  styles: { fontSize: 10, lineColor: [0, 0, 0] },
+  margin: { left: 15, right: 15 }
 });
 
 
@@ -276,57 +297,38 @@ doc.autoTable({
       body: [[`Rupees: ${totalInWords.toUpperCase()}`]],
       startY: doc.autoTable.previous.finalY + 2,
       theme: 'plain',
-      didDrawPage: drawPageBorder,
       styles: { fontSize: 10, fontStyle: 'bold', textColor: [0, 0, 139] },
       margin: { left: 15 }
     });
 
-   let termsStartY = doc.autoTable.previous.finalY + 2;
-let termsEndY = 0; // will be set later
+    const termsStartY = doc.autoTable.previous.finalY + 2;
+    doc.autoTable({
+      body: [
+        ['Terms & Conditions'],
+        ['1. Goods once sold will not be taken back.'],
+        ['2. All matters subject to "Sivakasi" jurisdiction only.']
+      ],
+      startY: termsStartY,
+      theme: 'plain',
+      styles: { fontSize: 9 },
+      margin: { left: 15 }
+    });
 
-// Terms & Conditions Table
-doc.autoTable({
-  body: [
-    ['Terms & Conditions'],
-    ['1. Goods once sold will not be taken back.'],
-    ['2. All matters subject to "Sivakasi" jurisdiction only.']
-  ],
-  startY: termsStartY,
-  theme: 'plain',
-  didDrawPage: drawPageBorder,
-  styles: { fontSize: 9 },
-  margin: { left: 15 },
-  didDrawCell: function (data) {
-    // Capture bottom Y of last row
-    if (data.row.index === 2 && data.column.index === 0) {
-      termsEndY = data.cell.y + data.cell.height;
-    }
-  }
-});
+    doc.autoTable({
+      body: [['', '', 'Authorised Signature']],
+      startY: doc.autoTable.previous.finalY + 2,
+      theme: 'plain',
+      styles: { fontSize: 10, fontStyle: 'bold' },
+      columnStyles: { 2: { halign: 'right' } },
+      margin: { left: 15, right: 15 }
+    });
 
-// Authorised Signature Table (placed just below terms)
-doc.autoTable({
-  body: [['', '', 'Authorised Signature']],
-  startY: doc.autoTable.previous.finalY + 2,
-  theme: 'plain',
-  didDrawPage: drawPageBorder,
-  styles: { fontSize: 10, fontStyle: 'bold' },
-  columnStyles: {
-    2: { halign: 'right' }
-  },
-  margin: { left: 15, right: 15 }
-});
-
-// 🔲 Draw the rectangle after both tables
-doc.setDrawColor(0);
-doc.setLineWidth(0.2);
-doc.rect(15, termsStartY, doc.internal.pageSize.getWidth() - 30, doc.autoTable.previous.finalY + 10 - termsStartY);
+    doc.rect(15, termsStartY, pageWidth - 30, doc.autoTable.previous.finalY + 10 - termsStartY);
   }
 
   const fileName = `TAX INVOICE-${detail.invoiceNumber}.pdf`;
   doc.save(fileName);
 };
-
   const handleShare = async (bill) => {
     const pdfUrl = await generatePdfUrl(bill); // Ensure you have a function to generate and return the PDF URL.
     const shareData = {

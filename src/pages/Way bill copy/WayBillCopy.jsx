@@ -63,7 +63,7 @@ useEffect(() => {
     const fetchBills = async () => {
       try {
         // Fetch bills from 'billing' collection
-        const billingSnapshot = await getDocs(collection(db, 'wayBilling'));
+        const billingSnapshot = await getDocs(collection(db, 'waybilling'));
         const billingData = billingSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         // Fetch bills from 'customerBilling' collection
@@ -123,10 +123,14 @@ const generatePDF = async (detail, copyType, billType) => {
   const {
     customerName,
     customerAddress,
+    customerEmail,
     customerState,
     customerPhoneNo,
     customerGSTIN,
-    customerPan
+    customerPan,
+    despatchedFrom,
+    despatchedTo,
+    transportName
   } = detail;
  
   let headerTableStartY = 12;
@@ -136,7 +140,7 @@ let headerTableEndY = 0; // Will be set dynamically
 doc.autoTable({
   body: [
     ['T.M.CRACKERS PARK', '','TAX INVOICE' ],
-    ['Address:1/90Z6, Balaji Nagar, Anna Colony', '',`Invoice Number: TMCP-${detail.invoiceNumber}-25` ],
+    ['Address:1/90Z6, Balaji Nagar, Anna Colony', '',`Invoice Number:${detail.invoiceNumber}` ],
     ['Vadamamalapuram ', '', `Date:${formattedDate}`],
     ['Thiruthangal - 626130', '', ''],
     ['Sivakasi (Zone)', '', ''],
@@ -182,6 +186,7 @@ doc.rect(14, headerTableStartY, pageWidth - 28, headerTableEndY - headerTableSta
 const customerDetails = [
   ['TO'],
   [`Name: ${customerName}`],
+  [`Company name: ${customerEmail}`],
   [`Address: ${customerAddress}`],
   [`State: ${customerState}`],
   [`Phone: ${customerPhoneNo}`],
@@ -222,55 +227,77 @@ if (productList.length === 0) {
 console.warn("⚠️ No products found in detail object:", detail);
 }
 
-const productTableBody = productList.map(item => [
-item.name || 'N/A',
-'36041000',
-item.quantity?.toString() || '0',
-`Rs.${item.saleprice?.toFixed(2) || '0.00'}`,
-`Rs.${((item.quantity || 0) * (item.saleprice || 0)).toFixed(2)}`
+const productTableBody = detail.productsDetails.map((item, index) => [
+  (index + 1).toString(), // S.No
+  item.name || 'N/A',
+  '36041000',
+  item.quantity?.toString() || '0',
+  `Rs.${item.saleprice?.toFixed(2) || '0.00'}`,
+  `Rs.${((item.quantity || 0) * (item.saleprice || 0)).toFixed(2)}`
 ]);
 
+const totalQuantity = detail.productsDetails.reduce((acc, item) => acc + (item.quantity || 0), 0);
+const totalProducts = detail.productsDetails.length;
 
+const totalAmount = `Rs.${detail.totalAmount?.toFixed(2) || '0.00'}`;
+const discountedAmount = `Rs.${detail.discountedTotal?.toFixed(2) || '0.00'}`;
+const grandTotal = `Rs.${detail.grandTotal?.toFixed(2) || '0.00'}`;
 
+// Push Totals
+productTableBody.push(
+  [
+    { content: 'Total Amount', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } },
+    totalAmount
+  ],
+  [
+    { content: 'Discounted Amount', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } },
+    discountedAmount
+  ],
+  [
+    { content: 'Grand Total', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } },
+    grandTotal
+  ],
+  [
+    { content: `Total Quantity: ${totalQuantity}`, colSpan: 3, styles: { halign: 'left', fontStyle: 'bold' } },
+    { content: `Total Products: ${totalProducts}`, colSpan: 2, styles: { halign: 'right', fontStyle: 'bold' } }
+  ]
+);
 
+// Despatch Info Rows
+productTableBody.push(
+  [
+    { content: 'Despatched From:', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
+    { content: despatchedFrom || 'N/A', colSpan: 2, styles: { fontStyle: 'normal' } }
+  ],
+  [
+    { content: 'Despatched To:', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
+    { content: despatchedTo || 'N/A', colSpan: 2, styles: { fontStyle: 'normal' } }
+  ],
+  [
+    { content: 'Transport Name:', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
+    { content: transportName || 'N/A', colSpan: 2, styles: { fontStyle: 'normal' } }
+  ]
+);
 
-  doc.autoTable({
-    head: [['Product Name', 'HSN CODE', 'Quantity', 'Price', 'Total Amount']],
-    body: productTableBody,
-    startY: doc.autoTable.previous.finalY + 2,
-    theme: 'grid',
-    didDrawPage: drawPageBorder,
-    headStyles: { fillColor: [255, 182, 193], textColor: [0, 0, 139], lineWidth: 0.2 },
-    alternateRowStyles: { fillColor: [245, 245, 245] },
-    styles: { fontSize: 10, lineColor:[0,0,0] },
-    columnStyles: {
-      0: { halign: 'left' },
-      1: { halign: 'center' },
-      2: { halign: 'right' },
-      3: { halign: 'right' },
-      4: { halign: 'right' }
-    }
-  });
-
-  const totalAmount = `Rs.${detail.totalAmount?.toFixed(2) || '0.00'}`;
-  const discountedAmount = `Rs.${detail.discountedTotal?.toFixed(2) || '0.00'}`;
-  const grandTotal = `Rs.${detail.grandTotal?.toFixed(2) || '0.00'}`;
-
-  doc.autoTable({
-    body: [
-      ['Total Amount', totalAmount],
-      ['Discounted Amount', discountedAmount],
-      ['Grand Total', grandTotal]
-    ],
-    startY: doc.autoTable.previous.finalY + 1,
-    theme: 'grid',
-    didDrawPage: drawPageBorder,
-    styles: { fontSize: 10, lineColor:[0,0,0] },
-    columnStyles: {
-      0: { halign: 'left', fontStyle: 'bold' },
-      1: { halign: 'right' }
-    }
-  });
+// Draw the full table
+doc.autoTable({
+  head: [['S.No', 'Product Name', 'HSN CODE', 'Quantity', 'Price', 'Total Amount']],
+  body: productTableBody,
+  startY: doc.autoTable.previous.finalY + 2,
+  theme: 'grid',
+  didDrawPage: drawPageBorder,
+  headStyles: { fillColor: [255, 182, 193], textColor: [0, 0, 139], lineWidth: 0.2 },
+  alternateRowStyles: { fillColor: [245, 245, 245] },
+  styles: { fontSize: 10, lineColor: [0, 0, 0] },
+  columnStyles: {
+    0: { halign: 'center' }, // S.No
+    1: { halign: 'left' },   // Product Name
+    2: { halign: 'center' }, // HSN
+    3: { halign: 'right' },  // Quantity
+    4: { halign: 'right' },  // Price
+    5: { halign: 'right' }   // Total
+  }
+});
 
   const numberToWords = require('number-to-words');
   const totalInWords = numberToWords.toWords(detail.grandTotal || 0);

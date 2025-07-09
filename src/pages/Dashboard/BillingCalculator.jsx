@@ -431,6 +431,7 @@ const generatePDFPage = (doc, copyType, invoiceNumber) => {
 const customerDetails = [
   ['TO'],
   [`Name: ${customerName}`],
+  [`Company Name: ${customerEmail}`],
   [`Address: ${customerAddress}`],
   [`State: ${customerState}`],
   [`Phone: ${customerPhoneNo}`],
@@ -476,7 +477,10 @@ doc.rect(14, customerStartY - 2, 182, customerEndY - customerStartY + 4);
     `Rs. ${item.saleprice.toFixed(2)}`,
     `Rs. ${(item.saleprice * item.quantity).toFixed(2)}`
   ]);
-
+  const totalQuantity = cart.reduce((sum, item) => {
+  const quantity = parseFloat(item.quantity);
+  return sum + (isNaN(quantity) ? 0 : quantity);
+}, 0);
   tableBody.push(
     [{ content: 'Total Amount:', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, `${Math.round(billingDetails.totalAmount)}.00`],
     [{ content: `Discount (${billingDetails.discountPercentage}%):`, colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } },
@@ -498,6 +502,15 @@ doc.rect(14, customerStartY - 2, 182, customerEndY - customerStartY + 4);
   tableBody.push(
     [{ content: 'Grand Total:', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, `${Math.round(billingDetails.grandTotal)}.00`]
   );
+    tableBody.push(
+  [
+    { content: 'Total Products:', styles: { halign: 'right', fontStyle: 'bold' } },
+    `${cart.length}`,
+    { content: 'Total Quantity:', colSpan: 1, styles: { halign: 'right', fontStyle: 'bold' } },
+    `${totalQuantity}`,
+    
+  ]
+);
 tableBody.push(
         [
           { content: 'Despatched From:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff',  } }, // Bottom border for this cell
@@ -1264,6 +1277,12 @@ return (
    value={customerName}
    onChange={(e) => setCustomerName(e.target.value)}
  />
+ <label>Company Name</label>
+ <input
+   type="email"
+   value={customerEmail}
+   onChange={(e) => setCustomerEmail(e.target.value)}
+ />
  <label>Customer Address</label>
  <input
    type="text"
@@ -1294,12 +1313,7 @@ return (
    value={customerPan}
    onChange={(e) => setCustomerPAN(e.target.value)}
  />
- <label>Customer Email</label>
- <input
-   type="email"
-   value={customerEmail}
-   onChange={(e) => setCustomerEmail(e.target.value)}
- />
+ 
   <label>Despatched From</label>
   <input
     type="text"

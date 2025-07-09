@@ -236,8 +236,7 @@ const WayBill = () => {
     } else if (taxOption === 'igst') {
       igstAmount = discountedTotal * 0.18;
     }
-
-    const grandTotal = discountedTotal ;
+    const grandTotal = discountedTotal + cgstAmount + sgstAmount + igstAmount;
 
     setBillingDetails(prevState => ({
       ...prevState,
@@ -390,7 +389,7 @@ const generatePDFPage = (doc, copyType, invoiceNumber) => {
 
   const headerTable = [
    ['T.M.CRACKERS PARK', '','TAX INVOICE' ],
-  ['Address:1/90Z6, Balaji Nagar, Anna Colony', '',`Invoice Number: SDC-${invoiceNumber}-25` ],
+  ['Address:1/90Z6, Balaji Nagar, Anna Colony', '',`Invoice Number:${invoiceNumber}` ],
   ['Vadamamalapuram ', '', `Date: ${selectedDate.getDate().toString().padStart(2, '0')}-${(selectedDate.getMonth() + 1).toString().padStart(2, '0')}-${selectedDate.getFullYear()}`],
   ['Thiruthangal - 626130', '', ''],
   ['Sivakasi (Zone)', '', ''],
@@ -432,6 +431,7 @@ const generatePDFPage = (doc, copyType, invoiceNumber) => {
 const customerDetails = [
   ['TO'],
   [`Name: ${customerName}`],
+  [`Company Name: ${customerEmail}`],
   [`Address: ${customerAddress}`],
   [`State: ${customerState}`],
   [`Phone: ${customerPhoneNo}`],
@@ -477,6 +477,10 @@ doc.rect(14, customerStartY - 2, 182, customerEndY - customerStartY + 4);
     `Rs. ${item.saleprice.toFixed(2)}`,
     `Rs. ${(item.saleprice * item.quantity).toFixed(2)}`
   ]);
+  const totalQuantity = cart.reduce((sum, item) => {
+  const quantity = parseFloat(item.quantity);
+  return sum + (isNaN(quantity) ? 0 : quantity);
+}, 0);
 
   tableBody.push(
     [{ content: 'Total Amount:', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, `${Math.round(billingDetails.totalAmount)}.00`],
@@ -485,20 +489,30 @@ doc.rect(14, customerStartY - 2, 182, customerEndY - customerStartY + 4);
     [{ content: 'Sub Total:', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, `${Math.round(billingDetails.discountedTotal)}.00`]
   );
 
-  // if (taxOption === 'cgst_sgst') {
-  //   tableBody.push(
-  //     [{ content: 'CGST (9%):', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, `${Math.round(billingDetails.cgstAmount)}.00`],
-  //     [{ content: 'SGST (9%):', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, `${Math.round(billingDetails.sgstAmount)}.00`]
-  //   );
-  // } else if (taxOption === 'igst') {
-  //   tableBody.push(
-  //     [{ content: 'IGST (18%):', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, `${Math.round(billingDetails.igstAmount)}.00`]
-  //   );
-  // }
+  if (taxOption === 'cgst_sgst') {
+    tableBody.push(
+      [{ content: 'CGST (9%):', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, `${Math.round(billingDetails.cgstAmount)}.00`],
+      [{ content: 'SGST (9%):', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, `${Math.round(billingDetails.sgstAmount)}.00`]
+    );
+  } else if (taxOption === 'igst') {
+    tableBody.push(
+      [{ content: 'IGST (18%):', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, `${Math.round(billingDetails.igstAmount)}.00`]
+    );
+  }
 
   tableBody.push(
     [{ content: 'Grand Total:', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold' } }, `${Math.round(billingDetails.grandTotal)}.00`]
   );
+  tableBody.push(
+  [
+    { content: 'Total Products:', styles: { halign: 'right', fontStyle: 'bold' } },
+    `${cart.length}`,
+    { content: 'Total Quantity:', colSpan: 1, styles: { halign: 'right', fontStyle: 'bold' } },
+    `${totalQuantity}`,
+    
+  ]
+);
+
 tableBody.push(
         [
           { content: 'Despatched From:', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff',  } }, // Bottom border for this cell
@@ -529,7 +543,7 @@ tableBody.push(
         //   { content: 'Rupees:', colSpan: 1, styles: { halign: 'right', fontStyle: 'bold', fillColor: '#fff', } }, // Bottom border for this cell
         //   { content: `${grandTotalInWords}` || 'N/A', colSpan: 6, styles: { fontStyle: 'normal', fillColor: '#fff',textColor: [0, 0, 139],fontStyle: 'bold', } } // Bottom border for this cell
         // ],
-      );
+      ); 
 
   doc.autoTable({
     head: [['S.No', 'Product Name', 'HSN Code', 'Quantity', 'Rate Per Price', 'Total']],
@@ -1138,7 +1152,7 @@ return (
           />
           <br />
           <br />
-          {/* <label>Tax Option</label>
+          <label>Tax Option</label>
           <select
             value={taxOption}
             onChange={(e) => setTaxOption(e.target.value)}
@@ -1146,7 +1160,7 @@ return (
             <option value="cgst_sgst">CGST + SGST</option>
             <option value="igst">IGST</option>
             <option value="no_tax">No Tax</option>
-          </select> */}
+          </select>
         </div>
 
         <div className="billing-amounts">
@@ -1160,7 +1174,7 @@ return (
                 <td>Discounted Total:</td>
                 <td>Rs. {billingDetails.discountedTotal.toFixed(2)}</td>
               </tr>
-              {/* {taxOption === "cgst_sgst" && (
+               {taxOption === "cgst_sgst" && (
                 <>
                   <tr>
                     <td>CGST (9%):</td>
@@ -1177,7 +1191,7 @@ return (
                   <td>IGST (18%):</td>
                   <td>Rs. {billingDetails.igstAmount.toFixed(2)}</td>
                 </tr>
-              )} */}
+              )}
               <tr className="grand-total-row">
                 <td>Grand Total:</td>
                 <td>Rs. {billingDetails.grandTotal.toFixed(2)}</td>
@@ -1266,6 +1280,12 @@ return (
    value={customerName}
    onChange={(e) => setCustomerName(e.target.value)}
  />
+ <label>Compnay Name</label>
+ <input
+   type="email"
+   value={customerEmail}
+   onChange={(e) => setCustomerEmail(e.target.value)}
+ />
  <label>Customer Address</label>
  <input
    type="text"
@@ -1296,12 +1316,7 @@ return (
    value={customerPan}
    onChange={(e) => setCustomerPAN(e.target.value)}
  />
- <label>Customer Email</label>
- <input
-   type="email"
-   value={customerEmail}
-   onChange={(e) => setCustomerEmail(e.target.value)}
- />
+ 
   <label>Despatched From</label>
   <input
     type="text"
