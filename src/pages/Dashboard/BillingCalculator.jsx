@@ -428,16 +428,19 @@ const generatePDFPage = (doc, copyType, invoiceNumber) => {
   // Customer Details
  let startY = doc.autoTable.previous?.finalY + 5 || 70;
 
-const customerDetails = [
+const customerDetailsRaw = [
   ['TO'],
-  [`Name: ${customerName}`],
-  [`Company Name: ${customerEmail}`],
-  [`Address: ${customerAddress}`],
-  [`State: ${customerState}`],
-  [`Phone: ${customerPhoneNo}`],
-  [`GSTIN: ${customerGSTIN}`],
-  [`PAN: ${customerPan}`]
+  customerName ? [`Name: ${customerName}`] : null,
+  customerEmail ? [`Company Name: ${customerEmail}`] : null,
+  customerAddress ? [`Address: ${customerAddress}`] : null,
+  customerState ? [`State: ${customerState}`] : null,
+  customerPhoneNo ? [`Phone: ${customerPhoneNo}`] : null,
+  customerGSTIN ? [`GSTIN: ${customerGSTIN}`] : null,
+  customerPan ? [`PAN: ${customerPan}`] : null,
 ];
+
+// Filter out null entries
+const customerDetails = customerDetailsRaw.filter(row => row !== null);
 
 const customerStartY = startY;
 
@@ -459,7 +462,7 @@ doc.autoTable({
   }
 });
 
-// Draw surrounding rectangle like header style
+// Draw surrounding rectangle
 const customerEndY = doc.autoTable.previous.finalY;
 doc.setDrawColor(0);
 doc.setLineWidth(0.1);
@@ -542,20 +545,33 @@ tableBody.push(
         //   { content: `${grandTotalInWords}` || 'N/A', colSpan: 6, styles: { fontStyle: 'normal', fillColor: '#fff',textColor: [0, 0, 139],fontStyle: 'bold', } } // Bottom border for this cell
         // ],
       );
-  doc.autoTable({
-    head: [['S.No', 'Product Name', 'HSN Code', 'Quantity', 'Rate Per Price', 'Total']],
-    body: tableBody,
-    startY,
-    theme: 'grid',
-    headStyles: { fillColor: [255, 182, 193], textColor: [0, 0, 139] },
-    alternateRowStyles: { fillColor: [245, 245, 245] },
-    bodyStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0] },
-    didDrawPage: drawPageBorder
-  });
+doc.autoTable({
+  head: [['S.No', 'Product Name', 'HSN Code', 'Quantity', 'Rate Per Price', 'Total']],
+  body: tableBody,
+  startY,
+  theme: 'grid',
+  headStyles: {
+    fillColor: [255, 182, 193],     // Light pink background
+    textColor: [0, 0, 139],         // Dark blue text
+    lineColor: [0, 0, 0],           // Black border
+    lineWidth: 0.3                  // Thickness of border
+  },
+  alternateRowStyles: {
+    fillColor: [245, 245, 245]      // Light gray for alternate rows
+  },
+  bodyStyles: {
+    fillColor: [255, 255, 255],     // White background
+    textColor: [0, 0, 0],           // Black text
+    lineColor: [0, 0, 0],           // Black border
+    lineWidth: 0.1                  // Border thickness for body
+  },
+  didDrawPage: drawPageBorder
+});
+
 
   // Check if enough space is left for Terms box; if not, add new page
-  startY = doc.autoTable.previous.finalY + 10;
-  const boxHeight = 50;
+startY = doc.autoTable.previous.finalY + 5;
+  const boxHeight = 30;
   if (startY + boxHeight > pageHeight - borderMargin) {
     doc.addPage();
     drawPageBorder();
@@ -569,15 +585,16 @@ tableBody.push(
   doc.setTextColor(0, 0, 139);
   doc.text(`Rupees: ${grandTotalInWords}`, borderMargin + 5, startY);
 
+
   const terms = [
     '1. Goods once sold will not be taken back.',
     '2. All matters Subject to "Sivakasi" jurisdiction only.'
   ];
 
-  const padding = 6;
-  const lineHeight = 6;
+  const padding = 8;
+  const lineHeight = 8;
   const boxX = borderMargin + 4;
-  const boxY = startY + 6;
+  const boxY = startY + 4;
   const boxWidth = pageWidth - 2 * (borderMargin + 4);
 
   doc.setDrawColor(0, 0, 0);

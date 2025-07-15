@@ -142,7 +142,7 @@ doc.autoTable({
     ['T.M.CRACKERS PARK', '','TAX INVOICE' ],
     ['Address:1/90Z6, Balaji Nagar, Anna Colony', '',`Invoice Number:${detail.invoiceNumber}` ],
     ['Vadamamalapuram ', '', `Date:${formattedDate}`],
-    ['Thiruthangal - 626130', '', ''],
+    ['Thiruthangal - 626130', '', 'GSTIN: 33AAVFT8036C1ZZ'],
     ['Sivakasi (Zone)', '', ''],
     ['Virudhunagar (Dist)', '', ''],
     ['State: 33-Tamil Nadu', '', ''],
