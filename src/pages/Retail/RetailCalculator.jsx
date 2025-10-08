@@ -479,7 +479,7 @@ doc.rect(14, customerStartY - 2, 182, customerEndY - customerStartY + 4);
   const tableBody = cart.map((item, index) => [
     (index + 1).toString(),
     item.name,
-    '3604',
+    
     item.quantity.toString(),
     `Rs. ${item.saleprice.toFixed(2)}`,
     `Rs. ${(item.saleprice * item.quantity).toFixed(2)}`
@@ -550,7 +550,7 @@ tableBody.push(
         // ],
       );
 doc.autoTable({
-  head: [['S.No', 'Product Name', 'HSN Code', 'Quantity', 'Rate Per Price', 'Total']],
+  head: [['S.No', 'Product Name', 'Quantity', 'Rate Per Price', 'Total']],
   body: tableBody,
   startY,
   theme: 'grid',
