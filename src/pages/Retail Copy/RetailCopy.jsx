@@ -223,7 +223,7 @@ doc.rect(14, customerStartY - 2, 182, customerEndY - customerStartY + 4);
  const productTableBody = detail.productsDetails.map((item, index) => [
   (index + 1).toString(), // S.No
   item.name || 'N/A',
-  '36041000',
+ 
   item.quantity?.toString() || '0',
   `Rs.${item.saleprice?.toFixed(2) || '0.00'}`,
   `Rs.${((item.quantity || 0) * (item.saleprice || 0)).toFixed(2)}`
@@ -274,7 +274,7 @@ productTableBody.push(
 
 // Draw the full table
 doc.autoTable({
-  head: [['S.No', 'Product Name', 'HSN CODE', 'Quantity', 'Price', 'Total Amount']],
+  head: [['S.No', 'Product Name', 'Quantity', 'Price', 'Total Amount']],
   body: productTableBody,
   startY: doc.autoTable.previous.finalY + 2,
   theme: 'grid',
